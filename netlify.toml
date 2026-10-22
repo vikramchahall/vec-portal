@@ -1,0 +1,10 @@
+# Netlify build settings. These override whatever is set in the Netlify UI.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
