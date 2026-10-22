@@ -1,0 +1,30 @@
+{
+  "_note": "Pexels stock photos. Free for commercial use, no attribution required. All URLs verified HTTP 200. These are GENERIC industry photos, not photographs of VEC sites - never caption one as a VEC project. Download into /public/images at build time; do not hotlink and do not store in Supabase Storage.",
+  "_url_pattern": "https://images.pexels.com/photos/{id}/pexels-photo-{id}.jpeg",
+  "_resize_hint": "append ?auto=compress&cs=tinysrgb&w=1600",
+  "images": [
+    { "slug": "hero-refinery-night", "id": "10407689", "url": "https://images.pexels.com/photos/10407689/pexels-photo-10407689.jpeg", "alt": "Oil refinery lit up at night", "usage": ["home-hero"] },
+    { "slug": "refinery-day", "id": "15970032", "url": "https://images.pexels.com/photos/15970032/pexels-photo-15970032.jpeg", "alt": "Oil refinery plant with pipework", "usage": ["about-header", "services-om"] },
+    { "slug": "etp-aerial", "id": "19517566", "url": "https://images.pexels.com/photos/19517566/pexels-photo-19517566.jpeg", "alt": "Effluent treatment plant", "usage": ["service-om-plants", "site-ETP-REF"] },
+    { "slug": "stp-aerial-1", "id": "19281034", "url": "https://images.pexels.com/photos/19281034/pexels-photo-19281034.jpeg", "alt": "Sewage treatment plant from above", "usage": ["project-C1"] },
+    { "slug": "stp-aerial-2", "id": "5712211", "url": "https://images.pexels.com/photos/5712211/pexels-photo-5712211.jpeg", "alt": "Aerial view of a sewage treatment plant", "usage": ["project-C2"] },
+    { "slug": "wtp-aerial-3", "id": "3808769", "url": "https://images.pexels.com/photos/3808769/pexels-photo-3808769.jpeg", "alt": "Aerial view of a wastewater treatment plant", "usage": ["site-WB-REF"] },
+    { "slug": "wtp-aerial-4", "id": "5131196", "url": "https://images.pexels.com/photos/5131196/pexels-photo-5131196.jpeg", "alt": "Water treatment plant from above", "usage": ["services-banner"] },
+    { "slug": "workers-safety-gear", "id": "32845683", "url": "https://images.pexels.com/photos/32845683/pexels-photo-32845683.jpeg", "alt": "Industrial workers in safety gear at a plant", "usage": ["service-manpower", "careers-header"] },
+    { "slug": "workers-hardhats", "id": "4956920", "url": "https://images.pexels.com/photos/4956920/pexels-photo-4956920.jpeg", "alt": "Group of workers wearing hard hats", "usage": ["about-our-people", "careers"] },
+    { "slug": "engineer-inspecting", "id": "2760241", "url": "https://images.pexels.com/photos/2760241/pexels-photo-2760241.jpeg", "alt": "Engineer in hi-vis vest and hard hat inspecting machinery", "usage": ["compliance-page"] },
+    { "slug": "welding-sparks", "id": "29976478", "url": "https://images.pexels.com/photos/29976478/pexels-photo-29976478.jpeg", "alt": "Industrial welding with sparks", "usage": ["service-erection"] },
+    { "slug": "welder-at-work", "id": "15888226", "url": "https://images.pexels.com/photos/15888226/pexels-photo-15888226.jpeg", "alt": "Welder at work in protective gear", "usage": ["trades-gallery"] },
+    { "slug": "welding-metal", "id": "2760343", "url": "https://images.pexels.com/photos/2760343/pexels-photo-2760343.jpeg", "alt": "Person welding metal", "usage": ["trades-gallery"] },
+    { "slug": "trench-worker", "id": "15099463", "url": "https://images.pexels.com/photos/15099463/pexels-photo-15099463.jpeg", "alt": "Worker in a trench at a construction site", "usage": ["service-pipeline", "project-C2"] },
+    { "slug": "spray-painting", "id": "6870314", "url": "https://images.pexels.com/photos/6870314/pexels-photo-6870314.jpeg", "alt": "Worker using a paint spray gun", "usage": ["service-painting", "project-C3"] },
+    { "slug": "pipes-valves", "id": "29248902", "url": "https://images.pexels.com/photos/29248902/pexels-photo-29248902.jpeg", "alt": "Industrial pipes with coloured valves", "usage": ["services-divider"] },
+    { "slug": "valve-large-pipe", "id": "13726337", "url": "https://images.pexels.com/photos/13726337/pexels-photo-13726337.jpeg", "alt": "Valve on a large pipe", "usage": ["projects-header"] },
+    { "slug": "gas-pipeline", "id": "3229014", "url": "https://images.pexels.com/photos/3229014/pexels-photo-3229014.jpeg", "alt": "Industrial pipeline at a plant", "usage": ["home-what-we-do"] },
+    { "slug": "control-room", "id": "33706880", "url": "https://images.pexels.com/photos/33706880/pexels-photo-33706880.jpeg", "alt": "Industrial electrical control room interior", "usage": ["service-site-services", "portal-login-bg"] },
+    { "slug": "operator-panel", "id": "35072831", "url": "https://images.pexels.com/photos/35072831/pexels-photo-35072831.jpeg", "alt": "Worker operating a machinery control panel", "usage": ["home-plant-operations"] },
+    { "slug": "smelter-molten", "id": "6804260", "url": "https://images.pexels.com/photos/6804260/pexels-photo-6804260.jpeg", "alt": "Molten metal in a foundry ladle", "usage": ["site-HZL-DEBARI"] },
+    { "slug": "transport-buses", "id": "18029643", "url": "https://images.pexels.com/photos/18029643/pexels-photo-18029643.jpeg", "alt": "Buses parked in a lot", "usage": ["project-C7"] },
+    { "slug": "water-channel", "id": "14108476", "url": "https://images.pexels.com/photos/14108476/pexels-photo-14108476.jpeg", "alt": "Concrete structure beside flowing water", "usage": ["project-C4", "project-C9", "project-C10"] }
+  ]
+}

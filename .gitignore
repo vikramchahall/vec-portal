@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+.env
+.env.local
+.env*.local
+.env.production
+*.tsbuildinfo
+next-env.d.ts
+
+# unrelated personal/work files kept in this folder
+OnePlus_x_NITJ/
+PMVBRY_*.xlsx

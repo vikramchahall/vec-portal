@@ -1,0 +1,427 @@
+@import "tailwindcss";
+
+/* =====================================================================
+   Palette — derived ONLY from the logo. Light theme.
+   Logo blue  #0F3CE8   Logo red  #E1121B   Logo ground  white
+   Every value below is a tint or shade of those three. No new hues.
+
+   Token names are kept from the previous theme so components did not
+   need rewriting: `void` is the page ground, `chalk` the primary text.
+   ===================================================================== */
+
+@theme {
+  /* Grounds: white, and the logo blue lifted almost all the way out */
+  --color-void: #ffffff;
+  --color-deep: #f3f5fe;
+  --color-surface: #ffffff;
+  --color-raised: #e9edfd;
+
+  /* Logo blue, sampled from the mark */
+  --color-brand: #0f3ce8;
+  --color-brand-lit: #3a63f0;
+  --color-brand-glow: #0f3ce8;
+
+  /* Logo red, sampled from the mark */
+  --color-accent: #e1121b;
+  --color-accent-lit: #b60e15;
+
+  /* Text, tinted with the logo blue so nothing is a neutral grey */
+  --color-chalk: #0a1540;
+  --color-mist: #4d5c8a;
+  --color-faint: #8b96bd;
+
+  --color-line: rgba(15, 60, 232, 0.15);
+  --color-line-strong: rgba(15, 60, 232, 0.32);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  background: var(--color-void);
+}
+
+body {
+  background: var(--color-void);
+  color: var(--color-chalk);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-brand);
+  border: 3px solid var(--color-deep);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-lit);
+}
+
+/* =====================================================================
+   Splash screen — server-rendered, so it covers the page on first paint
+   ===================================================================== */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  animation: splashOut 0.55s ease 1.75s forwards;
+}
+
+.splash--skip {
+  display: none !important;
+}
+
+@keyframes splashOut {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 1.5rem;
+}
+
+.splash-mark {
+  width: 92px;
+  height: 92px;
+}
+
+.splash-word {
+  margin-top: 1.5rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  letter-spacing: -0.02em;
+  color: #0f3ce8;
+  text-align: center;
+}
+
+.splash-rule {
+  margin-top: 1.25rem;
+  width: 170px;
+  height: 1px;
+  overflow: hidden;
+  background: rgba(15, 60, 232, 0.15);
+}
+
+.splash-bar {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  background: #e1121b;
+  animation: barFill 1.5s cubic-bezier(0.65, 0, 0.35, 1) backwards;
+}
+
+@keyframes barFill {
+  from { transform: scaleX(0); }
+}
+
+/* Base state is VISIBLE; the entrance uses fill-mode `backwards`, so the
+   mark hides only while its animation is genuinely pending. */
+.splash-cell {
+  opacity: 1;
+  animation: cellIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.splash-cell:nth-child(1) { animation-delay: 0.05s; }
+.splash-cell:nth-child(2) { animation-delay: 0.17s; }
+.splash-cell:nth-child(3) { animation-delay: 0.29s; }
+.splash-cell:nth-child(4) { animation-delay: 0.41s; }
+
+@keyframes cellIn {
+  from {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+/* Card rail.
+
+   Snapping is enabled only for touch. On a mouse or trackpad the snap
+   fights the arrows' own scroll animation and yanks at the end of it,
+   which is what made the carousel feel jerky. */
+.rail {
+  scroll-snap-type: none;
+  scrollbar-width: none;
+}
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .rail {
+    scroll-snap-type: x proximity;
+  }
+}
+
+/* Anchors must clear the fixed header when scrolled to. */
+.anchor {
+  scroll-margin-top: 92px;
+}
+
+/* =====================================================================
+   Scroll reveal
+   ===================================================================== */
+
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.js [data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* =====================================================================
+   Surface treatments
+   ===================================================================== */
+
+/* Engineering grid, drawn in logo blue at low opacity. */
+.grid-field {
+  background-image:
+    linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 20%, transparent 100%);
+}
+
+/* Frosted panel */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--color-line);
+}
+
+/* The hovering plate: lifts, and catches a soft blue glare. */
+.plate {
+  position: relative;
+  isolation: isolate;
+  transform-style: preserve-3d;
+  box-shadow: 0 1px 2px rgba(10, 21, 64, 0.04);
+  transition:
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.5s ease,
+    box-shadow 0.5s ease;
+  will-change: transform;
+}
+
+.plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  background: radial-gradient(
+    420px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(15, 60, 232, 0.06),
+    transparent 60%
+  );
+}
+
+.plate:hover::after {
+  opacity: 1;
+}
+
+.plate:hover {
+  transform: translateY(-8px);
+  border-color: var(--color-line-strong);
+  box-shadow:
+    0 26px 50px -24px rgba(10, 21, 64, 0.28),
+    0 6px 16px -8px rgba(15, 60, 232, 0.16);
+}
+
+/* Corner ticks — technical-drawing feel on hover. */
+.ticks::before,
+.ticks::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--color-accent);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 4;
+}
+.ticks::before {
+  top: 10px;
+  left: 10px;
+  border-top: 1.5px solid;
+  border-left: 1.5px solid;
+}
+.ticks::after {
+  bottom: 10px;
+  right: 10px;
+  border-bottom: 1.5px solid;
+  border-right: 1.5px solid;
+}
+.ticks:hover::before,
+.ticks:hover::after {
+  opacity: 1;
+}
+
+.plate img {
+  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.plate:hover img {
+  transform: scale(1.06);
+}
+
+/* Slow drift for hero photography */
+.drift {
+  animation: drift 30s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { transform: scale(1.06) translate3d(0, 0, 0); }
+  to   { transform: scale(1.13) translate3d(-1.5%, -1%, 0); }
+}
+
+/* Sweeping beam, logo blue and logo red at low opacity on white */
+.beam {
+  background: conic-gradient(
+    from 180deg at 50% 50%,
+    transparent 0deg,
+    rgba(15, 60, 232, 0.09) 60deg,
+    transparent 140deg,
+    transparent 220deg,
+    rgba(225, 18, 27, 0.06) 300deg,
+    transparent 360deg
+  );
+  animation: spin 34s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Marquee */
+.marquee-track {
+  animation: marquee 38s linear infinite;
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* Link underline growing from the left */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.link-underline:hover {
+  background-size: 100% 1px;
+}
+
+/* Scanline */
+.scan {
+  position: relative;
+  overflow: hidden;
+}
+.scan::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--color-brand), transparent);
+  transform: translateX(-100%);
+  animation: scan 4s ease-in-out infinite;
+}
+@keyframes scan {
+  50%, 100% { transform: translateX(100%); }
+}
+
+/* Route-change progress bar */
+.route-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 300;
+  height: 2px;
+  background: var(--color-accent);
+  animation: routeBar 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes routeBar {
+  from { width: 0; }
+  60%  { width: 72%; }
+  to   { width: 92%; }
+}
+
+/* =====================================================================
+   Accessibility and print — motion is decoration, never load-bearing
+   ===================================================================== */
+
+@media print {
+  .js [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .splash { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .drift,
+  .beam,
+  .marquee-track,
+  .scan::before,
+  .route-bar {
+    animation: none !important;
+  }
+
+  /* No splash at all for reduced-motion visitors. */
+  .splash { display: none !important; }
+
+  .plate:hover { transform: none; }
+  .plate:hover img { transform: none; }
+}

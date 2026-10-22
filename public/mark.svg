@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Vikram Engineering Co.">
+  <title>Vikram Engineering Co.</title>
+  <!-- Four SEPARATE diamonds with a 6px gap between them, so no outline
+       ever crosses a letter. Grid spans 31..89, centred on (60,60);
+       rotated 45deg the cells land TOP / RIGHT / LEFT / BOTTOM. -->
+  <g transform="rotate(45 60 60)" fill="none" stroke="#0F3CE8" stroke-width="2.6">
+    <rect x="31" y="31" width="26" height="26" />
+    <rect x="63" y="31" width="26" height="26" />
+    <rect x="31" y="63" width="26" height="26" />
+    <rect x="63" y="63" width="26" height="26" fill="#E1121B" stroke="none" />
+  </g>
+  <g fill="#E1121B" font-family="Arial, Helvetica, sans-serif" font-weight="700"
+     font-size="17" text-anchor="middle">
+    <text x="60" y="43">E</text>
+    <text x="37" y="66">V</text>
+    <text x="83" y="66">C</text>
+  </g>
+</svg>

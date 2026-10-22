@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Vikram Engineering Co.">
+  <title>Vikram Engineering Co.</title>
+  <defs>
+    <path id="vecArc" d="M 16,102 A 86,86 0 0 0 184,102" fill="none" />
+  </defs>
+
+  <!-- Four SEPARATE diamonds with a gap between them. Grid spans 60..140
+       around centre (100,86); rotated 45deg the cells land
+       TOP (E) / RIGHT (C) / LEFT (V) / BOTTOM (solid red). -->
+  <g transform="rotate(45 100 86)" fill="none" stroke="#0F3CE8" stroke-width="3.4">
+    <rect x="60" y="46" width="36" height="36" />
+    <rect x="104" y="46" width="36" height="36" />
+    <rect x="60" y="90" width="36" height="36" />
+    <rect x="104" y="90" width="36" height="36" fill="#E1121B" stroke="none" />
+  </g>
+
+  <g fill="#E1121B" font-family="Arial, Helvetica, sans-serif" font-weight="700"
+     font-size="24" text-anchor="middle">
+    <text x="100" y="62">E</text>
+    <text x="68" y="95">V</text>
+    <text x="132" y="95">C</text>
+  </g>
+
+  <text fill="#0F3CE8" font-family="Arial, Helvetica, sans-serif" font-weight="700"
+        font-size="17">
+    <textPath href="#vecArc" startOffset="50%" text-anchor="middle">Vikram Engineering Co.</textPath>
+  </text>
+</svg>
