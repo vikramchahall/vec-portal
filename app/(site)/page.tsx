@@ -131,11 +131,23 @@ export default function HomePage() {
                 industrial painting work.
               </p>
             </div>
-            <div data-reveal>
+            <figure data-reveal>
               <Plate tilt={false}>
-                <Photo slug="engineer-inspecting" className="aspect-square" sizes="240px" />
+                <div className="relative aspect-[3/4] overflow-hidden bg-raised">
+                  <Image
+                    src="/images/harjeet-singh.jpg"
+                    alt={`${company.proprietor}, Proprietor`}
+                    fill
+                    sizes="240px"
+                    className="object-cover object-top"
+                  />
+                </div>
               </Plate>
-            </div>
+              <figcaption className="mt-4">
+                <p className="font-display text-sm text-chalk">{company.proprietor}</p>
+                <p className="mt-1 text-[11px] uppercase tracking-[0.24em] text-faint">Proprietor</p>
+              </figcaption>
+            </figure>
           </div>
         </Container>
       </Section>
