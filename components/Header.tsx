@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { navigation } from "@/lib/content";
 
+// The office portal runs on its own server (Lightsail); the website may be served elsewhere.
+const PORTAL_LOGIN = "https://portal.vikramengineeringco.in/login";
+
 /**
  * Single-page navigation. Every item is an in-page anchor, so a click is a
  * scroll rather than a page load — there is no route to compile or fetch,
@@ -80,7 +83,7 @@ export default function Header() {
           })}
 
           <Link
-            href="/login"
+            href={PORTAL_LOGIN}
             className="group relative ml-3 overflow-hidden rounded-full border border-line-strong px-5 py-2.5 text-[13px] font-medium text-chalk"
           >
             <span className="absolute inset-0 -translate-x-full bg-accent transition-transform duration-500 ease-out group-hover:translate-x-0" />
@@ -123,7 +126,7 @@ export default function Header() {
             </a>
           ))}
           <Link
-            href="/login"
+            href={PORTAL_LOGIN}
             onClick={() => setOpen(false)}
             className="mt-3 block bg-accent px-5 py-3 text-center text-sm font-medium text-white"
           >

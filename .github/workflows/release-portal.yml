@@ -27,7 +27,7 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Tests (payroll engine tests are added here as they are written)
+      - name: Tests
         run: npm test --if-present
 
       - name: Build (standalone)
@@ -39,6 +39,7 @@ jobs:
         run: |
           cp -r public .next/standalone/
           cp -r .next/static .next/standalone/.next/
+          cp -r drizzle tools .next/standalone/
           tar -czf release.tgz -C .next/standalone .
           ls -lh release.tgz
 
