@@ -43,6 +43,13 @@
       "when": 1793720016810,
       "tag": "0005_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793722741096,
+      "tag": "0006_templates",
+      "breakpoints": true
     }
   ]
 }

@@ -33,6 +33,7 @@ export default async function WorkingSalary({ searchParams }: { searchParams: Pr
         {ms ? <>
           <a className="btn" href={`/portal/payroll/working-salary/export?unit=${unit}&month=${month}`}><Icon name="download" size="sm" />Working Salary .xlsx</a>
           <Link className="btn" href={`/portal/payroll/payslips?unit=${unit}&month=${month}`}><Icon name="receipt" size="sm" />Payslips</Link>
+          <Link className="btn" href={`/portal/payroll/compare?unit=${unit}&month=${month}`}><Icon name="swap" size="sm" />Compare with Excel</Link>
         </> : null}
       </PageHead>
       <form className="card toolbar" style={{ marginBottom: 16 }}>

@@ -9,7 +9,7 @@
  * last-4 copy for display. Money is whole rupees.
  */
 import {
-  pgTable, serial, integer, text, boolean, date, timestamp, jsonb, uniqueIndex, index, numeric, primaryKey,
+  customType, pgTable, serial, integer, text, boolean, date, timestamp, jsonb, uniqueIndex, index, numeric, primaryKey,
 } from "drizzle-orm/pg-core";
 
 export const sites = pgTable("sites", {
@@ -203,3 +203,14 @@ export const runSnapshots = pgTable("run_snapshots", {
   employeeId: integer("employee_id").notNull().references(() => employees.id),
   data: jsonb("data").notNull(),
 }, (t) => [primaryKey({ columns: [t.runId, t.employeeId] })]);
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+
+// The unit's own Working Salary workbook (last month's file), used as the export template.
+export const excelTemplates = pgTable("excel_templates", {
+  unitId: integer("unit_id").primaryKey().references(() => units.id),
+  fileName: text("file_name").notNull(),
+  file: bytea("file").notNull(),
+  uploadedBy: text("uploaded_by").notNull(),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow().notNull(),
+});

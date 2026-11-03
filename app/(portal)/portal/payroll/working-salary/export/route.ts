@@ -1,10 +1,11 @@
 import ExcelJS from "exceljs";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { audit, currentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, schema } from "@/lib/db";
 import { decrypt } from "@/lib/crypto";
 import { monthSalary } from "@/lib/payroll";
 import { WS_COLUMNS } from "@/lib/engine/salary";
+import { fillTemplate } from "@/lib/excel-template";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,25 @@ export async function GET(req: Request) {
   const monthName = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-IN", { month: "long", timeZone: "UTC" });
   const cover = unit !== "DRIVERS";
   const D = ms.days;
+  const fileName = `Working_Salary_${unit}_${MON[m - 1]}-${y}.xlsx`;
+  const send = (buf: Buffer | ArrayBuffer) => new Response(new Uint8Array(buf), {
+    headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="${fileName}"`, "Cache-Control": "no-store" },
+  });
+  // full bank account numbers only for the owner
+  const accounts = new Map<number, string>();
+  if (user.role === "owner" && rows.length) {
+    const enc = (await db().execute(sql`SELECT id, account_enc FROM employees WHERE id IN (${sql.join(rows.map((r) => sql`${r.p.employeeId}`), sql`, `)})`)) as unknown as { id: number; account_enc: string | null }[];
+    for (const e of enc) if (e.account_enc) accounts.set(e.id, decrypt(e.account_enc));
+  }
+
+  // the unit's own workbook (Sites & Units), filled with this month — unless ?plain=1
+  const [tpl] = q.get("plain") ? [] : await db().select().from(schema.excelTemplates).where(eq(schema.excelTemplates.unitId, ms.unit.id));
+  if (tpl) {
+    const out = await fillTemplate(tpl.file, { ms, rows, y, m, D, unit, accounts });
+    await audit(user.email, "export", "working_salary", `${unit} ${q.get("month")}`, { people: rows.length, netAfterPt: ms.totals.netAfterPt, template: tpl.fileName, warnings: out.warnings });
+    return send(out.buffer);
+  }
+
   const wb = new ExcelJS.Workbook();
   wb.creator = "VEC Portal";
   wb.calcProperties.fullCalcOnLoad = true;
@@ -193,11 +213,6 @@ export async function GET(req: Request) {
   // ---------- Master Sheet (bank and statutory numbers; full account numbers for the owner) ----------
   const master = wb.addWorksheet("Master Sheet");
   master.addRow(["Employee Code", "Sl. No.", "EMPLOYEE NAME", "DESIGNATION", "LOCATION", "ESI NUMBER", "PF ACCOUNT NUMBER", "BANK NAME", "BANK ACCOUNT NO.", "IFSC CODE", "UAN NO.", "NET SALARY"]).font = { bold: true };
-  const accounts = new Map<number, string>();
-  if (user.role === "owner" && rows.length) {
-    const enc = (await db().execute(sql`SELECT id, account_enc FROM employees WHERE id IN (${sql.join(rows.map((r) => sql`${r.p.employeeId}`), sql`, `)})`)) as unknown as { id: number; account_enc: string | null }[];
-    for (const e of enc) if (e.account_enc) accounts.set(e.id, decrypt(e.account_enc));
-  }
   rows.forEach((row, i) => {
     const r = master.addRow([/^\d+$/.test(row.p.card) ? Number(row.p.card) : row.p.card, i + 1, row.p.name, row.p.designation ?? "", `${unit},HMEL`, row.esicIp ?? "", row.pfAccount ?? "",
       row.bank.name ?? "", accounts.get(row.p.employeeId!) ?? (row.bank.last4 ? "XXXXXXXX" + row.bank.last4 : ""), row.bank.ifsc ?? "", row.uan ?? ""]);
@@ -207,7 +222,5 @@ export async function GET(req: Request) {
 
   const buf = await wb.xlsx.writeBuffer();
   await audit(user.email, "export", "working_salary", `${unit} ${q.get("month")}`, { people: rows.length, netAfterPt: ms.totals.netAfterPt });
-  return new Response(new Uint8Array(buf as ArrayBuffer), {
-    headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="Working_Salary_${unit}_${MON[m - 1]}-${y}.xlsx"`, "Cache-Control": "no-store" },
-  });
+  return send(buf as ArrayBuffer);
 }
