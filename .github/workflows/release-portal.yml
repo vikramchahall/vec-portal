@@ -17,9 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -52,11 +52,21 @@ jobs:
             echo "::warning::Deploy secrets are not set yet - the build was checked, nothing was released."
             exit 0
           fi
+          # Secrets pasted from Windows can carry \r, spaces or an https:// prefix - clean them, then check each one.
+          HOST="$(printf '%s' "$DEPLOY_HOST" | tr -d '[:space:]' | sed -E 's#^[a-z]+://##; s#/.*$##')"
           install -d -m 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KEY" | tr -d '\r' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
+            echo "::error::DEPLOY_KEY is not a valid private key. Paste the whole file ~/.ssh/vec-deploy (not .pub), from -----BEGIN to -----END lines."
+            exit 1
+          fi
+          if ! ssh-keygen -F "$HOST" -f ~/.ssh/known_hosts > /dev/null; then
+            echo "::error::DEPLOY_KNOWN_HOSTS has no line for $HOST. Paste known_hosts.txt (the line starting with $HOST ssh-ed25519)."
+            exit 1
+          fi
           REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "vec@${DEPLOY_HOST}" "$REL" < release.tgz
-          echo "Released $REL to https://${DEPLOY_HOST}"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 "vec@${HOST}" "$REL" < release.tgz
+          echo "Released $REL to https://${HOST}"
