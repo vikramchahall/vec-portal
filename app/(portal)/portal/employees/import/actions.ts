@@ -12,7 +12,7 @@ export type PreviewRow = ImportRow & { unitCode: string; action: "new" | "update
 export type PreviewFile = { file: string; kind: string; warnings: string[]; rows: PreviewRow[]; error?: string };
 export type PreviewState = { files: PreviewFile[]; monthStart: string } | { error: string } | null;
 
-type Existing = { id: number; card_no: string; name: string; unit: string | null; designation: string | null; category: string | null; basic_da: number | null; hra: number | null;
+type Existing = { id: number; card_no: string; name: string; unit: string | null; designation: string | null; category: string | null; basic_da: number | null; hra: number | null; special: number | null; conveyance: number | null;
   uan: string | null; ifsc: string | null; bank_name: string | null; account_last4: string | null; register_no: string | null };
 
 export async function previewImport(_prev: PreviewState, form: FormData): Promise<PreviewState> {
@@ -35,7 +35,7 @@ export async function previewImport(_prev: PreviewState, form: FormData): Promis
   }
 
   const cards = parsed.flatMap((p) => p.rows.map((r) => r.cardNo));
-  const existing = cards.length ? (await db().execute(sql`SELECT e.id, c.card_no, e.name, u.code AS unit, a.designation, a.category, p.basic_da, p.hra, e.uan, e.ifsc, e.bank_name, e.account_last4, a.register_no
+  const existing = cards.length ? (await db().execute(sql`SELECT e.id, c.card_no, e.name, u.code AS unit, a.designation, a.category, p.basic_da, p.hra, p.special, p.conveyance, e.uan, e.ifsc, e.bank_name, e.account_last4, a.register_no
     FROM employee_cards c JOIN employees e ON e.id = c.employee_id
     LEFT JOIN LATERAL (SELECT * FROM assignments a WHERE a.employee_id = e.id AND a.valid_to IS NULL LIMIT 1) a ON true
     LEFT JOIN units u ON u.id = a.unit_id
@@ -59,6 +59,8 @@ export async function previewImport(_prev: PreviewState, form: FormData): Promis
     diff("register no.", e.register_no, r.registerNo);
     diff("Basic + DA", e.basic_da, r.basicDa);
     diff("HRA", e.hra, r.hra);
+    diff("special allowance", e.special, r.special);
+    diff("conveyance / others", e.conveyance, r.conveyance);
     diff("UAN", e.uan, r.uan);
     diff("IFSC", e.ifsc, r.ifsc);
     diff("bank", e.bank_name, r.bankName);

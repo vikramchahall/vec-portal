@@ -180,3 +180,15 @@ export const leaveOpening = pgTable("leave_opening", {
   l: numeric("l", { precision: 12, scale: 6 }).notNull(),
   source: text("source").notNull(), // import | locked-month | manual
 }, (t) => [primaryKey({ columns: [t.employeeId, t.month] })]);
+
+// S4: entries the office makes for a person and month (as typed into the October sheets).
+export const payAdjustments = pgTable("pay_adjustments", {
+  runId: integer("run_id").notNull().references(() => monthRuns.id, { onDelete: "cascade" }),
+  employeeId: integer("employee_id").notNull().references(() => employees.id),
+  otDays: numeric("ot_days", { precision: 8, scale: 4 }).notNull().default("0"), // OT sheet: paid at gross ÷ 26 × 2 per day
+  hold: integer("hold").notNull().default(0),
+  leaveEncashment: integer("leave_encashment").notNull().default(0),
+  reason: text("reason").notNull(),
+  actor: text("actor").notNull(),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.runId, t.employeeId] })]);

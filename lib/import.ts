@@ -96,13 +96,13 @@ function parseSalaryWorkbook(wb: XLSX.WorkBook, warnings: string[]): ImportRow[]
     doj: first((s) => s.includes("joining") || s === "d.o.j."),
     // the full-month structure is the second "Basic + DA" group (the first is the month's earned amount)
     basic: second([h], (s) => s === "basic + da"),
-    hra: second([h], (s) => s === "hra"),
-    special: second([h], (s) => s === "special allowance"),
-    conv: second([h], (s) => s === "conveyance allowance"),
     pf: second([h + 1], (s) => s.startsWith("pf") && s.includes("12%")),
     esi: second([h + 1], (s) => s.startsWith("esic") && s.includes("0.75%")),
     bonus: second([h], (s) => s === "monthly bonus"),
   };
+  // The full-month block is Basic + DA, DA, HRA, then two allowance columns. The salary formulas use them by
+  // position (WB-REF labels them "Conveyance" and "Others", the other files "Special" and "Conveyance").
+  const struct = c.basic === undefined ? undefined : { hra: c.basic + 2, special: c.basic + 3, conv: c.basic + 4 };
   if (c.name === undefined) throw new Error("Name column not found.");
   if (c.basic === undefined) warnings.push(`"${wsName}": full-month Basic + DA column not found — pay structures will not be imported.`);
 
@@ -120,9 +120,9 @@ function parseSalaryWorkbook(wb: XLSX.WorkBook, warnings: string[]): ImportRow[]
       doj: c.doj !== undefined ? toIsoDate(row[c.doj]) : undefined,
       isDriver: designation === "DRIVER",
       basicDa: c.basic !== undefined ? money(row[c.basic]) : undefined,
-      hra: c.hra !== undefined ? money(row[c.hra]) ?? 0 : undefined,
-      special: c.special !== undefined ? money(row[c.special]) ?? 0 : undefined,
-      conveyance: c.conv !== undefined ? money(row[c.conv]) ?? 0 : undefined,
+      hra: struct ? money(row[struct.hra]) ?? 0 : undefined,
+      special: struct ? money(row[struct.special]) ?? 0 : undefined,
+      conveyance: struct ? money(row[struct.conv]) ?? 0 : undefined,
       pfMember: c.pf !== undefined ? (money(row[c.pf]) ?? 0) > 0 : undefined,
       esiMember: c.esi !== undefined ? (money(row[c.esi]) ?? 0) > 0 : undefined,
       bonusMonthly: c.bonus !== undefined ? (money(row[c.bonus]) ?? 0) > 0 : undefined,

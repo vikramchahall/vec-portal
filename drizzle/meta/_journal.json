@@ -29,6 +29,13 @@
       "when": 1793714229222,
       "tag": "0003_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793715910791,
+      "tag": "0004_pay_adjustments",
+      "breakpoints": true
     }
   ]
 }
