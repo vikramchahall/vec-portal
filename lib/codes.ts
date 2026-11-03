@@ -12,6 +12,8 @@ export type PersonMonth = TcPerson & {
   hasOpening: boolean;
 };
 export type Exception = { kind: string; severity: "block" | "review" | "info"; card: string; employeeId: number | null; name: string; detail: string; day?: number };
+export type SerializedPerson = Omit<PersonMonth, "overrides"> & { overrides: [number, { code: string; reason: string; actor: string }][] };
+export const revive = (p: SerializedPerson): PersonMonth => ({ ...p, overrides: new Map(p.overrides) });
 export type MonthAttendance = TcResult & { run: typeof schema.monthRuns.$inferSelect; persons: PersonMonth[]; exceptions: Exception[] };
 
 const monthStart = (y: number, m: number) => `${y}-${String(m).padStart(2, "0")}-01`;
@@ -44,6 +46,12 @@ export async function monthAttendance(unitCode: string, year: number, month: num
   if (!tc) return null;
   const d = db();
   const run = await getRun(tc.unit.id, tc.unit.siteId, year, month);
+  if (run.status === "locked") {
+    // a locked month is read from its frozen copy, never recomputed
+    const snaps = await d.select().from(schema.runSnapshots).where(eq(schema.runSnapshots.runId, run.id));
+    const persons = snaps.map((s) => revive((s.data as { p: SerializedPerson }).p)).sort((a, b) => (Number(a.registerNo) || 9999) - (Number(b.registerNo) || 9999) || a.name.localeCompare(b.name));
+    return { ...tc, run, persons, exceptions: [] };
+  }
   const ov = await d.select().from(schema.dayOverrides).where(eq(schema.dayOverrides.runId, run.id));
   const ids = tc.people.map((p) => p.employeeId).filter((x): x is number => x !== null);
   const opening = ids.length ? await d.select().from(schema.leaveOpening).where(and(eq(schema.leaveOpening.month, monthStart(year, month)), sql`${schema.leaveOpening.employeeId} IN (${sql.join(ids.map((i) => sql`${i}`), sql`, `)})`)) : [];

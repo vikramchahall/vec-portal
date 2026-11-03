@@ -14,7 +14,7 @@ export async function setAdjustment(unitCode: string, year: number, month: numbe
   const [u] = await db().select().from(schema.units).where(eq(schema.units.code, unitCode));
   if (!u) return { error: "Unknown unit" };
   const run = await getRun(u.id, u.siteId, year, month, user.email);
-  if (run.status === "locked") return { error: "This month is locked." };
+  if (run.status !== "draft") return { error: `This month is ${run.status} — reopen it on the Approval screen to make changes.` };
   const t = schema.payAdjustments;
   if (v.otDays === 0 && v.hold === 0 && v.leaveEncashment === 0) {
     await db().delete(t).where(and(eq(t.runId, run.id), eq(t.employeeId, employeeId)));

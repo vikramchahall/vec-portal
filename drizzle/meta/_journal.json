@@ -36,6 +36,13 @@
       "when": 1793715910791,
       "tag": "0004_pay_adjustments",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793720016810,
+      "tag": "0005_lock",
+      "breakpoints": true
     }
   ]
 }

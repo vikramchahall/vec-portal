@@ -65,7 +65,7 @@ export default async function WorkingSalary({ searchParams }: { searchParams: Pr
                   <td className="stick2"><Link href={`/portal/employees/${r.p.employeeId}?tab=employment`}>{r.p.name}</Link><div className="dim" style={{ fontSize: 11 }}>{r.p.designation ?? ""}{r.structure ? ` · ₹${n(r.structure.basicDa)}${r.structure.hra ? ` + HRA ${n(r.structure.hra)}` : ""}` : ""}</div></td>
                   {r.line ? COLS.map(([k]) => <td key={k} className={`num ${k === "netAfterPt" ? "net" : ""}`} style={k === "lop" && r.line!.lop ? { color: "var(--err)" } : undefined}>{n((r.line as unknown as Record<string, number>)[k])}</td>)
                     : <td colSpan={COLS.length} style={{ color: "var(--err)" }}>{r.problem} — <Link href={`/portal/employees/${r.p.employeeId}/edit`}>add the structure</Link></td>}
-                  <td><AdjustButton unit={unit!} year={y} month={m} employeeId={r.p.employeeId!} name={r.p.name} adj={r.adj} locked={ms.run.status === "locked"} /></td>
+                  <td><AdjustButton unit={unit!} year={y} month={m} employeeId={r.p.employeeId!} name={r.p.name} adj={r.adj} locked={ms.run.status !== "draft"} /></td>
                 </tr>))}</tbody>
               <tfoot><tr><td className="stick" /><td className="stick2">Total ({t.people})</td>
                 {COLS.map(([k]) => <td key={k} className="num">{["lop", "earnedBasicDa", "earnedHra"].includes(k) ? n(ms.rows.reduce((s, r) => s + (r.line ? (r.line as unknown as Record<string, number>)[k] : 0), 0)) : n(t[k] ?? 0)}</td>)}<td /></tr></tfoot>

@@ -65,7 +65,7 @@ export default async function Review({ searchParams }: { searchParams: Promise<{
                       : e.kind === "NO_OPENING_BALANCE" ? <Link className="btn sm" href="/portal/employees/import">Import</Link> : null}</td></tr>))}</tbody>
               </table></div>
             </div>) : null}
-          {people.length ? <ReviewGrid unit={unit!} year={y} month={m} days={ma.days} holidays={ma.run.holidays} locked={ma.run.status === "locked"} people={people} siteName={siteName} />
+          {people.length ? <ReviewGrid unit={unit!} year={y} month={m} days={ma.days} holidays={ma.run.holidays} locked={ma.run.status !== "draft"} people={people} siteName={siteName} />
             : <div className="card"><div className="empty">No employees in {unit} for this month.</div></div>}
         </>
       )}

@@ -157,7 +157,11 @@ export const monthRuns = pgTable("month_runs", {
   year: integer("year").notNull(),
   month: integer("month").notNull(),
   holidays: integer("holidays").array().notNull().default([]),
-  status: text("status").notNull().default("draft"), // draft | reviewed | approved | locked
+  status: text("status").notNull().default("draft"), // draft | approved | locked
+  approvedBy: text("approved_by"),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  lockedBy: text("locked_by"),
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [uniqueIndex("month_runs_unit_month").on(t.unitId, t.year, t.month)]);
@@ -191,4 +195,11 @@ export const payAdjustments = pgTable("pay_adjustments", {
   reason: text("reason").notNull(),
   actor: text("actor").notNull(),
   at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.runId, t.employeeId] })]);
+
+// S5: the frozen copy of a locked month — codes, balances and salary per person, never recomputed.
+export const runSnapshots = pgTable("run_snapshots", {
+  runId: integer("run_id").notNull().references(() => monthRuns.id, { onDelete: "cascade" }),
+  employeeId: integer("employee_id").notNull().references(() => employees.id),
+  data: jsonb("data").notNull(),
 }, (t) => [primaryKey({ columns: [t.runId, t.employeeId] })]);

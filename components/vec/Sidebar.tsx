@@ -26,7 +26,7 @@ const NAV: Section[] = [
   ] },
   { label: "Payroll & Compliance", groups: [
     { t: "Payroll", icon: "wallet", items: [
-      { t: "Working Salary", href: "/portal/payroll/working-salary" }, { t: "Payroll Approval", soon: "S5" },
+      { t: "Working Salary", href: "/portal/payroll/working-salary" }, { t: "Approval & Lock", href: "/portal/payroll/approval" },
     ] },
     { t: "Statutory & Compliance", icon: "shield", items: [
       { t: "PF / ESIC Challans", soon: "S7" }, { t: "Compliance Calendar", soon: "S7" },

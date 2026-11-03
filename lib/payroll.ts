@@ -1,7 +1,7 @@
 import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
-import { monthAttendance, type MonthAttendance, type PersonMonth } from "@/lib/codes";
+import { monthAttendance, revive, type MonthAttendance, type PersonMonth, type SerializedPerson } from "@/lib/codes";
 import { calcSalary, salarySettings, type SalaryLine } from "@/lib/engine/salary";
 
 export type PayRow = {
@@ -16,11 +16,23 @@ export type MonthSalary = MonthAttendance & { rows: PayRow[]; totals: Record<str
 
 const SUM_KEYS = ["payableDays", "gross", "hpAmount", "totalEarning", "pf", "esi", "lwf", "bonus", "net", "pt", "netAfterPt", "pfEmployer", "esiEmployer", "lwfEmployer", "ctc", "ctcBilling"] as const;
 
+function totalsOf(rows: PayRow[]) {
+  const totals: Record<string, number> = Object.fromEntries(SUM_KEYS.map((k) => [k, rows.reduce((s, r) => s + (r.line ? r.line[k] : 0), 0)]));
+  totals.people = rows.length;
+  return totals;
+}
+
 /** Working Salary for one unit and month, from the day codes and each person's pay structure. */
 export async function monthSalary(unitCode: string, year: number, month: number): Promise<MonthSalary | null> {
   const ma = await monthAttendance(unitCode, year, month);
   if (!ma) return null;
   const settings = salarySettings(ma.days);
+  if (ma.run.status === "locked") {
+    const snaps = await db().select().from(schema.runSnapshots).where(eq(schema.runSnapshots.runId, ma.run.id));
+    const byEmp = new Map(snaps.map((s) => [s.employeeId, s.data as Omit<PayRow, "p"> & { p: SerializedPerson }]));
+    const rows: PayRow[] = ma.persons.map((p) => ({ ...byEmp.get(p.employeeId!)!, p: revive(byEmp.get(p.employeeId!)!.p) }));
+    return { ...ma, rows, totals: totalsOf(rows), settings };
+  }
   const ids = ma.persons.filter((p) => p.known).map((p) => p.employeeId!);
   const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(ma.days).padStart(2, "0")}`;
   const info = ids.length ? (await db().execute(sql`SELECT e.id, e.pf_member, e.esi_member, e.bonus_monthly, e.bank_name, e.account_last4, e.ifsc, e.uan, e.esic_ip, e.pf_account, e.doj::text AS doj,
@@ -56,7 +68,5 @@ export async function monthSalary(unitCode: string, year: number, month: number)
     }, settings);
     return { ...base, line, problem: null };
   });
-  const totals = Object.fromEntries(SUM_KEYS.map((k) => [k, rows.reduce((s, r) => s + (r.line ? r.line[k] : 0), 0)]));
-  totals.people = rows.length;
-  return { ...ma, rows, totals, settings };
+  return { ...ma, rows, totals: totalsOf(rows), settings };
 }
