@@ -1,0 +1,62 @@
+# Builds the portal on GitHub's machines and hands it to the Lightsail server.
+# Runs on a push to the "release" branch, or by hand from the Actions tab.
+# The server keeps the previous build and rolls back by itself if the new one does not start.
+name: Release portal
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+concurrency:
+  group: release-portal
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Tests (payroll engine tests are added here as they are written)
+        run: npm test --if-present
+
+      - name: Build (standalone)
+        run: npm run build
+        env:
+          STANDALONE: "1"
+
+      - name: Package
+        run: |
+          cp -r public .next/standalone/
+          cp -r .next/static .next/standalone/.next/
+          tar -czf release.tgz -C .next/standalone .
+          ls -lh release.tgz
+
+      - name: Hand over to the server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_KEY" ] || [ -z "$DEPLOY_HOST" ]; then
+            echo "::warning::Deploy secrets are not set yet - the build was checked, nothing was released."
+            exit 0
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          REL="$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}"
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "vec@${DEPLOY_HOST}" "$REL" < release.tgz
+          echo "Released $REL to https://${DEPLOY_HOST}"
