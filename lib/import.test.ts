@@ -17,7 +17,9 @@ function salaryBook() {
     ["Employee Code", "Sl. No.", "EMPLOYEE NAME", "DESIGNATION", "LOCATION", "ESI NUMBER", "PF ACCOUNT NUMBER", "BANK NAME", "BANK ACCOUNT NO.", "IFSC CODE", "UAN NO."],
     [46869012, 1, "GURPREET SINGH", "PLANT OPERATOR", "WB-PET,HMEL", "WCP", "", "Punjab National Bank", "12345678904021", "punb0123400", "101234563001"],
   ];
-  const af = [[], [], [], ["", "Sr.", "", "Name ", "Designation", "", "", "", "Assumed Weekly Off (most common WO weekday in Sep-26)"], [], [], [46869012, 1, "", "GURPREET SINGH", "", "", "", "", "Sun"]];
+  const af = [[], [], [], ["", "Sr.", "", "Name ", "Designation", "", "", "", "Assumed Weekly Off (most common WO weekday in Sep-26)"],
+    ["", "", "", "", "", "", "", "", "", "B/F = Sep-26 closing balance", "", "Credited", "", "Used", "", "Balance"], [],
+    [46869012, 1, "", "GURPREET SINGH", "", "", "", "", "Sun", 0.625, 2.072, 4, 1.28, 0, 0, 4.625, 3.352]];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(af), "Attendance Format");
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws), "Working Salary Oct-26");
@@ -55,6 +57,10 @@ describe("parseWorkbook (salary workbook)", () => {
   });
   it("reads the usual weekly off", () => {
     expect(r.rows[0].woWeekday).toBe("Sun");
+  });
+  it("reads opening (B/F) and closing leave balances", () => {
+    expect(r.rows[0].leave).toEqual({ clBf: 0.625, lBf: 2.072, clClose: 4.625, lClose: 3.352 });
+    expect(r.rows[1].leave).toBeUndefined();
   });
 });
 

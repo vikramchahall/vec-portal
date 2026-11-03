@@ -5,6 +5,7 @@ import { audit, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sql } from "drizzle-orm";
 import { saveEmployee, unitList } from "@/lib/employees";
+import { setOpening } from "@/lib/codes";
 import { parseWorkbook, type ImportRow } from "@/lib/import";
 
 export type PreviewRow = ImportRow & { unitCode: string; action: "new" | "update" | "same"; employeeId: number | null; changes: string[]; problems: string[] };
@@ -68,16 +69,25 @@ export async function previewImport(_prev: PreviewState, form: FormData): Promis
   return { files: parsed, monthStart };
 }
 
-export type ApplyResult = { created: number; updated: number; unchanged: number; failed: { cardNo: string; name: string; error: string }[] } | { error: string };
+export type ApplyResult = { created: number; updated: number; unchanged: number; balances?: number; failed: { cardNo: string; name: string; error: string }[] } | { error: string };
 
 export async function applyImport(rows: PreviewRow[], monthStart: string): Promise<ApplyResult> {
   const user = await requireUser();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(monthStart)) return { error: "Bad month." };
   let created = 0, updated = 0, unchanged = 0;
   const failed: { cardNo: string; name: string; error: string }[] = [];
+  let balances = 0;
+  // leave from the file: B/F opens this month, the closing balance opens next month
+  const nextMonth = (() => { const [y, m] = monthStart.split("-").map(Number); return m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, "0")}-01`; })();
+  const saveLeave = async (employeeId: number, r: PreviewRow) => {
+    if (!r.leave) return;
+    await setOpening(employeeId, monthStart, r.leave.clBf, r.leave.lBf, "import");
+    await setOpening(employeeId, nextMonth, r.leave.clClose, r.leave.lClose, "import");
+    balances++;
+  };
   for (const r of rows) {
     if (r.problems.length) { failed.push({ cardNo: r.cardNo, name: r.name, error: r.problems.join("; ") }); continue; }
-    if (r.action === "same") { unchanged++; continue; }
+    if (r.action === "same") { unchanged++; if (r.employeeId) await saveLeave(r.employeeId, r); continue; }
     try {
       const isNew = r.employeeId === null;
       const res = await saveEmployee(r.employeeId, {
@@ -90,13 +100,14 @@ export async function applyImport(rows: PreviewRow[], monthStart: string): Promi
         effectiveFrom: isNew ? (r.doj ?? monthStart) : monthStart, structureFrom: isNew && r.doj && r.doj > monthStart ? r.doj : monthStart,
       });
       if (res.changes.length) await audit(user.email, isNew ? "create" : "update", "employee", res.id, ["import", ...res.changes]);
+      await saveLeave(res.id, r);
       if (isNew) created++; else updated++;
     } catch (e) {
       failed.push({ cardNo: r.cardNo, name: r.name, error: e instanceof Error ? e.message : "failed" });
     }
   }
-  await audit(user.email, "import", "employees", null, { created, updated, unchanged, failed: failed.length, monthStart });
+  await audit(user.email, "import", "employees", null, { created, updated, unchanged, balances, failed: failed.length, monthStart });
   revalidatePath("/portal/employees");
   revalidatePath("/portal");
-  return { created, updated, unchanged, failed };
+  return { created, updated, unchanged, balances, failed };
 }

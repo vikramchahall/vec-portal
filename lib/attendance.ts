@@ -5,10 +5,10 @@ import { buildDuties, type Duty, type Punch } from "@/lib/engine/duty";
 
 export type TcPerson = {
   card: string; employeeId: number | null; vecId: string | null; name: string; designation: string | null; registerNo: string | null;
-  known: boolean; duties: Duty[];
+  known: boolean; duties: Duty[]; doj: string | null; woWeekday: string | null; status: string | null;
 };
 export type TcResult = {
-  unit: { code: string; name: string; workOrders: string[] };
+  unit: { id: number; code: string; name: string; workOrders: string[]; siteId: number };
   year: number; month: number; days: number; people: TcPerson[];
   summary: { cards: number; known: number; unknown: number; missingPunch: number; late: number; coffNet: number; noPunchPeople: number; flagged: number };
 };
@@ -32,11 +32,11 @@ export async function timeCompliance(unitCode: string, year: number, month: numb
   // a night shift on the last day ends the next morning; a duty with no IN can belong to the day before the 1st
   const from = sql`(${first}::date - interval '1 day')`, to = sql`(${last}::date + interval '2 days')`;
 
-  const assigned = (await d.execute(sql`SELECT DISTINCT ON (c.card_no) e.id, e.vec_id, e.name, a.designation, a.register_no, c.card_no
+  const assigned = (await d.execute(sql`SELECT DISTINCT ON (c.card_no) e.id, e.vec_id, e.name, a.designation, a.register_no, c.card_no, e.doj::text AS doj, a.wo_weekday, e.status
     FROM assignments a JOIN employees e ON e.id = a.employee_id
     JOIN employee_cards c ON c.employee_id = e.id AND c.valid_from <= ${last}::date AND (c.valid_to IS NULL OR c.valid_to >= ${first}::date)
     WHERE a.unit_id = ${unit.id} AND a.valid_from <= ${last}::date AND (a.valid_to IS NULL OR a.valid_to >= ${first}::date)
-    ORDER BY c.card_no, a.valid_from DESC`)) as unknown as { id: number; vec_id: string; name: string; designation: string | null; register_no: string | null; card_no: string }[];
+    ORDER BY c.card_no, a.valid_from DESC`)) as unknown as { id: number; vec_id: string; name: string; designation: string | null; register_no: string | null; card_no: string; doj: string | null; wo_weekday: string | null; status: string }[];
 
   const unknown = unit.workOrders.length ? (await d.execute(sql`SELECT p.card_no, max(p.name) AS name, max(p.designation) AS designation
     FROM punches p WHERE p.work_order IN (${sql.join(unit.workOrders.map((w) => sql`${w}`), sql`, `)})
@@ -57,16 +57,18 @@ export async function timeCompliance(unitCode: string, year: number, month: numb
   const people: TcPerson[] = [
     ...assigned.sort((a, b) => regNum(a.register_no) - regNum(b.register_no) || a.name.localeCompare(b.name)).map((a) => ({
       card: a.card_no, employeeId: a.id, vecId: a.vec_id, name: a.name, designation: a.designation, registerNo: a.register_no, known: true,
+      doj: a.doj, woWeekday: a.wo_weekday, status: a.status,
       duties: buildDuties(byCard.get(a.card_no) ?? [], year, month),
     })),
     ...unknown.map((u) => ({
       card: u.card_no, employeeId: null, vecId: null, name: (u.name ?? "").toUpperCase(), designation: u.designation, registerNo: null, known: false,
+      doj: null, woWeekday: null, status: null,
       duties: buildDuties(byCard.get(u.card_no) ?? [], year, month),
     })),
   ];
   const all = people.flatMap((p) => p.duties);
   return {
-    unit: { code: unit.code, name: unit.name, workOrders: unit.workOrders }, year, month, days, people,
+    unit: { id: unit.id, code: unit.code, name: unit.name, workOrders: unit.workOrders, siteId: unit.siteId }, year, month, days, people,
     summary: {
       cards: people.filter((p) => p.duties.length).length, known: people.filter((p) => p.known && p.duties.length).length, unknown: unknown.length,
       missingPunch: all.filter((x) => !x.inn || !x.out).length, late: all.filter((x) => x.late > 0).length,

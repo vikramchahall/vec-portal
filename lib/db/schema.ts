@@ -9,7 +9,7 @@
  * last-4 copy for display. Money is whole rupees.
  */
 import {
-  pgTable, serial, integer, text, boolean, date, timestamp, jsonb, uniqueIndex, index,
+  pgTable, serial, integer, text, boolean, date, timestamp, jsonb, uniqueIndex, index, numeric, primaryKey,
 } from "drizzle-orm/pg-core";
 
 export const sites = pgTable("sites", {
@@ -148,3 +148,35 @@ export const punches = pgTable("punches", {
   name: text("name"),
   designation: text("designation"),
 }, (t) => [uniqueIndex("punches_swipe").on(t.cardNo, t.ts, t.dir, t.workOrder, t.access), index("punches_card_ts").on(t.cardNo, t.ts), index("punches_wo_ts").on(t.workOrder, t.ts)]);
+
+// S3: one record per unit and month (holidays, status), office overrides of single day codes,
+// and leave opening balances (from the imported files, later from the previous locked month).
+export const monthRuns = pgTable("month_runs", {
+  id: serial("id").primaryKey(),
+  unitId: integer("unit_id").notNull().references(() => units.id),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  holidays: integer("holidays").array().notNull().default([]),
+  status: text("status").notNull().default("draft"), // draft | reviewed | approved | locked
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("month_runs_unit_month").on(t.unitId, t.year, t.month)]);
+
+export const dayOverrides = pgTable("day_overrides", {
+  id: serial("id").primaryKey(),
+  runId: integer("run_id").notNull().references(() => monthRuns.id, { onDelete: "cascade" }),
+  employeeId: integer("employee_id").notNull().references(() => employees.id),
+  day: integer("day").notNull(),
+  code: text("code").notNull(), // P HP H WO X L CL OD, or NOPUNCH = ignore that day's punches (card issue)
+  reason: text("reason").notNull(),
+  actor: text("actor").notNull(),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("day_overrides_key").on(t.runId, t.employeeId, t.day)]);
+
+export const leaveOpening = pgTable("leave_opening", {
+  employeeId: integer("employee_id").notNull().references(() => employees.id),
+  month: date("month").notNull(), // first day of the month the balance opens
+  cl: numeric("cl", { precision: 12, scale: 6 }).notNull(),
+  l: numeric("l", { precision: 12, scale: 6 }).notNull(),
+  source: text("source").notNull(), // import | locked-month | manual
+}, (t) => [primaryKey({ columns: [t.employeeId, t.month] })]);

@@ -15,6 +15,7 @@ export type ImportRow = {
   pfMember?: boolean; esiMember?: boolean; bonusMonthly?: boolean;
   uan?: string; pfAccount?: string; esicIp?: string; bankName?: string; account?: string; ifsc?: string;
   fatherName?: string; dob?: string; gender?: string; mobile?: string; aadhaar?: string; pan?: string;
+  leave?: { clBf: number; lBf: number; clClose: number; lClose: number }; // from the Attendance Format sheet
 };
 export type ParseResult = { kind: "salary-workbook" | "template"; rows: ImportRow[]; warnings: string[]; sheets: string[] };
 
@@ -166,6 +167,22 @@ function parseSalaryWorkbook(wb: XLSX.WorkBook, warnings: string[]): ImportRow[]
         const x = byCard.get(cardOf(a[r]?.[0]) ?? "");
         const d = text(a[r]?.[wo]);
         if (x && d && /^(mon|tue|wed|thu|fri|sat|sun)$/i.test(d)) x.woWeekday = d[0].toUpperCase() + d.slice(1, 3).toLowerCase();
+      }
+      break;
+    }
+    // Leave balances: "B/F" = opening (CL, then L), "Balance" = closing (CL, then L) — next month's opening
+    for (let r0 = 0; r0 < Math.min(8, a.length); r0++) {
+      const cells = (a[r0] ?? []).map(norm);
+      const bf = cells.findIndex((v) => v.startsWith("b/f"));
+      const bal = cells.findIndex((v, i) => i > bf && v === "balance");
+      if (bf < 0 || bal < 0) continue;
+      const num = (v: unknown) => (typeof v === "number" ? v : v === null || v === "" ? 0 : Number(v));
+      for (let r = r0 + 1; r < a.length; r++) {
+        const x = byCard.get(cardOf(a[r]?.[0]) ?? "");
+        if (!x) continue;
+        const row = a[r] ?? [];
+        if ([bf, bf + 1, bal, bal + 1].some((c) => Number.isNaN(num(row[c])))) continue;
+        x.leave = { clBf: num(row[bf]), lBf: num(row[bf + 1]), clClose: num(row[bal]), lClose: num(row[bal + 1]) };
       }
       break;
     }

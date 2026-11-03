@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { audit, currentUser } from "@/lib/auth";
-import { timeCompliance } from "@/lib/attendance";
+import { monthAttendance } from "@/lib/codes";
 import { clock } from "@/lib/engine/duty";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ const colName = (n: number) => { let s = ""; while (n) { const r = (n - 1) % 26;
 /**
  * Time_Compliance_<UNIT>_<Month>-<YYYY>.xlsx in the layout the client receives (time-compliance format):
  * 3 rows per person (IN, OUT, HRS), dates across, "(+1)" for a next-day OUT, "Missing" for a missing punch,
- * HRS as a live formula. No-punch days are left blank until day codes are added (next build step).
+ * HRS as a live formula, and the final day code (coloured) on days without a punch.
  */
 export async function GET(req: Request) {
   const user = await currentUser();
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   const unit = q.get("unit") ?? "";
   const [y, m] = (q.get("month") ?? "").split("-").map(Number);
   if (!unit || !y || !m) return new Response("unit and month are required", { status: 400 });
-  const tc = await timeCompliance(unit, y, m);
+  const tc = await monthAttendance(unit, y, m);
   if (!tc) return new Response("Unknown unit", { status: 404 });
   const monthName = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-IN", { month: "long", timeZone: "UTC" });
 
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   ws.getCell(1, 1).value = `VIKRAM ENGINEERING CO.  -  ${tc.unit.code}  -  TIME COMPLIANCE (gate IN / OUT time)  -  ${monthName} ${y}`;
   ws.getCell(1, 1).font = { bold: true, size: 13, color: { argb: "FF0A1540" } };
   ws.mergeCells(2, 1, 2, lastCol);
-  ws.getCell(2, 1).value = 'Each person has 3 rows: IN = first entry at the gate, OUT = last exit for that duty, HRS = time between IN and OUT. Night shift is shown on the day it started; "(+1)" = out next morning. "Missing" = that punch is not recorded.';
+  ws.getCell(2, 1).value = 'Each person has 3 rows: IN = first entry at the gate, OUT = last exit for that duty, HRS = time between IN and OUT. Night shift is shown on the day it started; "(+1)" = out next morning. "Missing" = that punch is not recorded. Days with no punch show the code from the Attendance sheet: WO = weekly off, X = absent, L = leave, CL = casual leave, H = holiday. "-" = not yet joined.';
   ws.getCell(2, 1).alignment = { wrapText: true, vertical: "top" };
   ws.getRow(2).height = 30;
 
@@ -58,7 +58,9 @@ export async function GET(req: Request) {
 
   let r = 6;
   const yyyymm = `${y}-${String(m).padStart(2, "0")}`;
-  tc.people.forEach((p, i) => {
+  // code colours as in the October files: WO green, X red, L yellow, CL orange, H blue
+  const FILL: Record<string, string> = { WO: "FFC6EFCE", X: "FFFFC7CE", L: "FFFFEB9C", CL: "FFF8CBAD", H: "FFBDD7EE", HP: "FFD9D2E9", OD: "FFC6EFCE" };
+  tc.persons.forEach((p, i) => {
     const byDay = new Map(p.duties.map((d) => [d.day, d]));
     ws.getCell(r, 1).value = i + 1;
     ws.getCell(r, 2).value = /^\d+$/.test(p.card) ? Number(p.card) : p.card;
@@ -69,7 +71,14 @@ export async function GET(req: Request) {
     for (let d = 1; d <= tc.days; d++) {
       const c = firstDay + d - 1, L = colName(c);
       const x = byDay.get(d);
-      if (!x) { ws.mergeCells(r, c, r + 2, c); continue; }
+      if (!x) {
+        ws.mergeCells(r, c, r + 2, c);
+        const code = p.known ? p.final[d - 1] || "-" : "";
+        ws.getCell(r, c).value = code;
+        if (FILL[code]) ws.getCell(r, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: FILL[code] } };
+        ws.getCell(r, c).font = { bold: true };
+        continue;
+      }
       ws.getCell(r, c).value = x.inn ? clock(x.inn) : "Missing";
       ws.getCell(r + 1, c).value = clock(x.out, `${yyyymm}-${String(d).padStart(2, "0")}`);
       const result = x.minutes !== null ? x.minutes / 1440 : "-";
@@ -94,7 +103,7 @@ export async function GET(req: Request) {
   wb.calcProperties.fullCalcOnLoad = true;
 
   const buf = await wb.xlsx.writeBuffer();
-  await audit(user.email, "export", "time_compliance", `${unit} ${q.get("month")}`, { people: tc.people.length });
+  await audit(user.email, "export", "time_compliance", `${unit} ${q.get("month")}`, { people: tc.persons.length });
   const name = `Time_Compliance_${unit}_${monthName}-${y}.xlsx`;
   return new Response(new Uint8Array(buf as ArrayBuffer), {
     headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" },

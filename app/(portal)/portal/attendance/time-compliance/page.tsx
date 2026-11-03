@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { punchMonths, timeCompliance } from "@/lib/attendance";
+import { punchMonths } from "@/lib/attendance";
+import { monthAttendance } from "@/lib/codes";
 import { unitList } from "@/lib/employees";
 import { clock, hhmm, type Duty } from "@/lib/engine/duty";
 import { Icon } from "@/components/vec/Icon";
@@ -17,13 +18,13 @@ export default async function TimeCompliance({ searchParams }: { searchParams: P
   const unit = sp.unit ?? punchUnits[0]?.code;
   const month = sp.month ?? months[0]?.month ?? new Date().toISOString().slice(0, 7);
   const [y, m] = month.split("-").map(Number);
-  const tc = unit ? await timeCompliance(unit, y, m) : null;
+  const tc = unit ? await monthAttendance(unit, y, m) : null;
   const half = sp.half === "2" ? 2 : 1;
   const qs = (o: Record<string, string | undefined>) => `?${new URLSearchParams(Object.entries({ unit, month, half: String(half), flagged: sp.flagged, ...o }).filter(([, v]) => v) as [string, string][])}`;
   const monthOptions = [...new Set(months.map((x) => x.month))];
 
   const days = tc ? (half === 1 ? [...Array(16)].map((_, i) => i + 1) : [...Array(tc.days - 16)].map((_, i) => i + 17)) : [];
-  const people = (tc?.people ?? []).filter((p) => sp.flagged !== "1" || p.duties.some((d) => d.flags.length || d.late) || !p.known);
+  const people = (tc?.persons ?? []).filter((p) => sp.flagged !== "1" || p.duties.some((d) => d.flags.length || d.late) || !p.known);
 
   return (
     <>
@@ -67,7 +68,7 @@ export default async function TimeCompliance({ searchParams }: { searchParams: P
                 <Link className={`tab ${half === 1 ? "on" : ""}`} href={qs({ half: "1" })}>01–16</Link>
                 <Link className={`tab ${half === 2 ? "on" : ""}`} href={qs({ half: "2" })}>17–{tc.days}</Link>
               </div>
-              <span className="ml-auto dim" style={{ fontSize: 12 }}>Codes (WO, X, L, CL, H) on no-punch days come with the next build step</span>
+              <span className="ml-auto dim" style={{ fontSize: 12 }}>No-punch days show the final code from <Link href={`/portal/attendance/review?unit=${unit}&month=${month}`}>Attendance Review</Link> · &ldquo;-&rdquo; = not yet joined</span>
             </div>
             <div className="tbl-wrap" style={{ maxHeight: 640 }}>
               <table className="tbl tc compact">
@@ -88,7 +89,7 @@ export default async function TimeCompliance({ searchParams }: { searchParams: P
                       <td className="lbl">{kind}</td>
                       {days.map((dd) => {
                         const x = byDay.get(dd);
-                        if (!x) return kind === "IN" ? <td key={dd} rowSpan={4} className="codecell" /> : null;
+                        if (!x) { const c = p.final[dd - 1] ?? ""; return kind === "IN" ? <td key={dd} rowSpan={4} className="codecell">{p.known ? <span className={`code ${c}`}>{c || "-"}</span> : null}</td> : null; }
                         if (kind === "IN") return <td key={dd} className={!x.inn ? "flag" : x.late ? "late" : ""} title={x.late ? `${x.shift} shift · ${x.late} min late` : x.shift ?? ""}>{x.inn ? clock(x.inn) : "Missing"}</td>;
                         if (kind === "OUT") return <td key={dd} className={!x.out ? "flag" : ""}>{clock(x.out, dutyDay(dd))}</td>;
                         if (kind === "HRS") return <td key={dd} title={x.flags.join("; ")} className={x.flags.some((f) => f.startsWith("span") || f.startsWith("very")) ? "flag" : ""}><b>{x.minutes !== null ? hhmm(x.minutes) : "-"}</b></td>;
