@@ -1,15 +1,16 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 
 /**
  * Office login without a login service (BRD-01 14.1): 2–3 fixed accounts in
- * /opt/vec/shared/office-users.json on the server, passwords bcrypt-hashed.
+ * /opt/vec/shared/office-users.json on the server, passwords scrypt-hashed
+ * (Node's built-in crypto, so tools/office-user.mjs needs no extra package).
  * Add or change one with tools/office-user.mjs. 5 wrong tries lock the email
  * for 15 minutes. Sessions are an HMAC-signed cookie valid for 8 hours.
  *
@@ -81,6 +82,23 @@ export async function requireUser(role?: Role): Promise<SessionUser> {
 export type LoginResult = { ok: true } | { ok: false; message: string };
 let dummyHash: string | undefined;
 
+// "scrypt$N$r$p$salt$hash" (base64) — the same format tools/office-user.mjs writes.
+const scryptAsync = promisify(scrypt) as (pw: string, salt: Buffer, len: number, opts: { N: number; r: number; p: number; maxmem: number }) => Promise<Buffer>;
+
+async function hashPassword(pw: string) {
+  const salt = randomBytes(16), N = 32768, r = 8, p = 1;
+  const h = await scryptAsync(pw, salt, 64, { N, r, p, maxmem: 64 * 1024 * 1024 });
+  return ["scrypt", N, r, p, salt.toString("base64"), h.toString("base64")].join("$");
+}
+
+async function verifyPassword(pw: string, stored: string) {
+  const [kind, N, r, p, salt, hash] = stored.split("$");
+  if (kind !== "scrypt" || !hash) return false;
+  const want = Buffer.from(hash, "base64");
+  const got = await scryptAsync(pw, Buffer.from(salt, "base64"), want.length, { N: Number(N), r: Number(r), p: Number(p), maxmem: 64 * 1024 * 1024 });
+  return timingSafeEqual(got, want);
+}
+
 export async function login(emailRaw: string, password: string): Promise<LoginResult> {
   const email = emailRaw.trim().toLowerCase();
   const d = db();
@@ -91,8 +109,8 @@ export async function login(emailRaw: string, password: string): Promise<LoginRe
   }
   const user = officeUsers().find((u) => u.email.toLowerCase() === email);
   // compare against a dummy hash when the email is unknown, so timing does not reveal valid emails
-  dummyHash ??= bcrypt.hashSync("not-a-real-password", 10);
-  const good = await bcrypt.compare(password, user?.hash ?? dummyHash);
+  dummyHash ??= await hashPassword("not-a-real-password");
+  const good = await verifyPassword(password, user?.hash ?? dummyHash);
   if (!user || !good) {
     const failed = (att?.lockedUntil && att.lockedUntil <= new Date() ? 0 : att?.failed ?? 0) + 1;
     const lockedUntil = failed >= MAX_TRIES ? new Date(Date.now() + LOCK_MINUTES * 60000) : null;

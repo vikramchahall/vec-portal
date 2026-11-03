@@ -9,15 +9,20 @@
  *   sudo -u vec node tools/office-user.mjs remove hr@example.in
  *   sudo -u vec node tools/office-user.mjs list
  *
- * The password is asked for (not typed on the command line) and stored as a bcrypt hash in
+ * The password is asked for (not typed on the command line) and stored as an scrypt hash in
  * /opt/vec/shared/office-users.json (or OFFICE_USERS_FILE).
  */
+import { randomBytes, scryptSync } from "node:crypto";
 import { readFileSync, writeFileSync, renameSync } from "node:fs";
-import { createRequire } from "node:module";
 import readline from "node:readline";
 
-const require = createRequire(import.meta.url);
-const bcrypt = require("bcryptjs");
+// Same format lib/auth.ts verifies: "scrypt$N$r$p$salt$hash". Only Node built-ins, so this runs in any release folder.
+function hashPassword(pw) {
+  const salt = randomBytes(16), N = 32768, r = 8, p = 1;
+  const h = scryptSync(pw, salt, 64, { N, r, p, maxmem: 64 * 1024 * 1024 });
+  return ["scrypt", N, r, p, salt.toString("base64"), h.toString("base64")].join("$");
+}
+
 const FILE = process.env.OFFICE_USERS_FILE ?? "/opt/vec/shared/office-users.json";
 const [cmd, emailRaw, name, role] = process.argv.slice(2);
 
@@ -47,7 +52,7 @@ if (cmd === "list") {
   if (p1.length < 10) { console.error("Password too short"); process.exit(1); }
   const p2 = await askHidden("Repeat password: ");
   if (p1 !== p2) { console.error("Passwords do not match"); process.exit(1); }
-  const hash = bcrypt.hashSync(p1, 12);
+  const hash = hashPassword(p1);
   save([...users.filter((u) => u.email !== email), { email, name, role, hash }]);
   console.log(`saved ${role} account ${email}`);
 } else {
