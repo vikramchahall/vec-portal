@@ -9,9 +9,14 @@ import { createClient } from "@supabase/supabase-js";
  * else. Keeping the service-role key out of this path means a mistake here
  * cannot expose employee or payroll data later.
  */
+// SUPABASE_URL / SUPABASE_ANON_KEY are read when the server runs (Lightsail .env); the NEXT_PUBLIC_
+// names are fixed at build time, which is how the Netlify build provided them.
+const url0 = () => process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key0 = () => process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
 export function getPublicClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = url0();
+  const key = key0();
 
   if (!url || !key) return null;
 
@@ -20,8 +25,4 @@ export function getPublicClient() {
   });
 }
 
-export const isSupabaseConfigured = () =>
-  Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
+export const isSupabaseConfigured = () => Boolean(url0() && key0());

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { navigation } from "@/lib/content";
 
-// The office portal runs on its own server (Lightsail); the website may be served elsewhere.
-const PORTAL_LOGIN = "https://portal.vikramengineeringco.in/login";
+// Website and portal are one site on the Lightsail server.
+const PORTAL_LOGIN = "/login";
 
 /**
  * Single-page navigation. Every item is an in-page anchor, so a click is a

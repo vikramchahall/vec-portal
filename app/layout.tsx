@@ -3,7 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { company } from "@/lib/content";
 
-const siteUrl = "https://vikramengineering.co.in";
+const siteUrl = "https://vikramengineeringco.in";
 
 /**
  * Type: Space Grotesk for headings and the wordmark, Inter for body copy.

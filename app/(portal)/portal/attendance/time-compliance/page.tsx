@@ -10,7 +10,7 @@ import { Crumbs, PageHead } from "@/components/vec/ui";
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const coffText = (c: number) => (c > 0 ? `+${c}` : c < 0 ? `${c}`.replace("-", "−") : "");
 
-export default async function TimeCompliance({ searchParams }: { searchParams: Promise<{ unit?: string; month?: string; half?: string; flagged?: string }> }) {
+export default async function TimeCompliance({ searchParams }: { searchParams: Promise<{ unit?: string; month?: string; flagged?: string }> }) {
   await requireUser();
   const sp = await searchParams;
   const [units, months] = await Promise.all([unitList(), punchMonths()]);
@@ -19,11 +19,10 @@ export default async function TimeCompliance({ searchParams }: { searchParams: P
   const month = sp.month ?? months[0]?.month ?? new Date().toISOString().slice(0, 7);
   const [y, m] = month.split("-").map(Number);
   const tc = unit ? await monthAttendance(unit, y, m) : null;
-  const half = sp.half === "2" ? 2 : 1;
-  const qs = (o: Record<string, string | undefined>) => `?${new URLSearchParams(Object.entries({ unit, month, half: String(half), flagged: sp.flagged, ...o }).filter(([, v]) => v) as [string, string][])}`;
+  const qs = (o: Record<string, string | undefined>) => `?${new URLSearchParams(Object.entries({ unit, month, flagged: sp.flagged, ...o }).filter(([, v]) => v) as [string, string][])}`;
   const monthOptions = [...new Set(months.map((x) => x.month))];
 
-  const days = tc ? (half === 1 ? [...Array(16)].map((_, i) => i + 1) : [...Array(tc.days - 16)].map((_, i) => i + 17)) : [];
+  const days = tc ? [...Array(tc.days)].map((_, i) => i + 1) : []; // the whole month in one grid
   const people = (tc?.persons ?? []).filter((p) => sp.flagged !== "1" || p.duties.some((d) => d.flags.length || d.late) || !p.known);
 
   return (
@@ -41,7 +40,6 @@ export default async function TimeCompliance({ searchParams }: { searchParams: P
         <select className="select" name="month" defaultValue={month}>
           {(monthOptions.length ? monthOptions : [month]).map((mo) => <option key={mo} value={mo}>{new Date(mo + "-01T00:00:00Z").toLocaleString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" })}</option>)}
         </select>
-        <input type="hidden" name="half" value={half} />
         <button className="btn" type="submit">Show</button>
         <span className="ml-auto" />
         <Link className={`chip ${sp.flagged === "1" ? "on" : ""}`} href={qs({ flagged: sp.flagged === "1" ? undefined : "1" })}><Icon name="alert" size="sm" />Only people with flags</Link>
@@ -64,10 +62,7 @@ export default async function TimeCompliance({ searchParams }: { searchParams: P
             </div></div>) : null}
           <div className="card">
             <div className="toolbar">
-              <div className="tabs" style={{ border: 0 }}>
-                <Link className={`tab ${half === 1 ? "on" : ""}`} href={qs({ half: "1" })}>01–16</Link>
-                <Link className={`tab ${half === 2 ? "on" : ""}`} href={qs({ half: "2" })}>17–{tc.days}</Link>
-              </div>
+              <b style={{ fontSize: 13.5 }}>{new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" })} · 01–{tc.days}</b>
               <span className="ml-auto dim" style={{ fontSize: 12 }}>No-punch days show the final code from <Link href={`/portal/attendance/review?unit=${unit}&month=${month}`}>Attendance Review</Link> · &ldquo;-&rdquo; = not yet joined</span>
             </div>
             <div className="tbl-wrap" style={{ maxHeight: 640 }}>
