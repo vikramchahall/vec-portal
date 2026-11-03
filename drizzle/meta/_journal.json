@@ -15,6 +15,13 @@
       "when": 1793708835009,
       "tag": "0001_seed_sites",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793713196208,
+      "tag": "0002_punches",
+      "breakpoints": true
     }
   ]
 }

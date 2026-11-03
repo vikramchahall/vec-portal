@@ -20,7 +20,7 @@ const NAV: Section[] = [
       { t: "Employee Documents", soon: "S1b" },
     ] },
     { t: "Attendance", icon: "calendar", items: [
-      { t: "Punch Data Upload", soon: "S2" }, { t: "Time Compliance", soon: "S2" }, { t: "Attendance Review", soon: "S3" },
+      { t: "Punch Data Upload", href: "/portal/attendance/upload" }, { t: "Time Compliance", href: "/portal/attendance/time-compliance" }, { t: "Attendance Review", soon: "S3" },
       { t: "Leave Management", soon: "S3" }, { t: "C-Off Management", soon: "S3" },
     ] },
   ] },

@@ -121,3 +121,30 @@ export const loginAttempts = pgTable("login_attempts", {
   failed: integer("failed").notNull().default(0),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
 });
+
+// Raw gate punches (S2). One row per swipe; the daily In/Out format is stored as Entry / Exit pairs.
+// The same swipe in two overlapping exports is stored once (unique index; the access result is part of the key,
+// because a gate can log a denied and a granted swipe at the same second).
+export const punchFiles = pgTable("punch_files", {
+  id: serial("id").primaryKey(),
+  fileName: text("file_name").notNull(),
+  sha256: text("sha256").notNull().unique(),
+  format: text("format").notNull(), // gate | daily
+  month: text("month"), // YYYY-MM (most punches)
+  rows: integer("rows").notNull().default(0),
+  status: text("status").notNull().default("uploading"), // uploading | complete
+  uploadedBy: text("uploaded_by").notNull(),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const punches = pgTable("punches", {
+  id: serial("id").primaryKey(),
+  fileId: integer("file_id").notNull().references(() => punchFiles.id, { onDelete: "cascade" }),
+  cardNo: text("card_no").notNull(),
+  ts: timestamp("ts", { mode: "string" }).notNull(), // local (IST) wall-clock time
+  dir: text("dir").notNull(), // Entry | Exit
+  access: text("access").notNull(),
+  workOrder: text("work_order").notNull(),
+  name: text("name"),
+  designation: text("designation"),
+}, (t) => [uniqueIndex("punches_swipe").on(t.cardNo, t.ts, t.dir, t.workOrder, t.access), index("punches_card_ts").on(t.cardNo, t.ts), index("punches_wo_ts").on(t.workOrder, t.ts)]);
