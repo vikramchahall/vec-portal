@@ -32,6 +32,7 @@ export async function listEmployees(f: ListFilter) {
   if (f.missing === "bank") where.push(sql`(e.account_enc IS NULL OR e.ifsc IS NULL)`);
   if (f.missing === "uan") where.push(sql`(e.pf_member AND e.uan IS NULL)`);
   if (f.missing === "aadhaar") where.push(sql`e.aadhaar_enc IS NULL`);
+  if (f.missing === "dob") where.push(sql`e.dob IS NULL`);
   const cond = sql.join(where, sql` AND `);
   const base = sql`FROM employees e
     LEFT JOIN LATERAL (SELECT * FROM assignments a WHERE a.employee_id = e.id AND a.valid_to IS NULL ORDER BY a.valid_from DESC LIMIT 1) a ON true
@@ -45,6 +46,12 @@ export async function listEmployees(f: ListFilter) {
     ${base} ORDER BY u.sort_order NULLS LAST, NULLIF(regexp_replace(a.register_no, '\\D', '', 'g'), '')::int NULLS LAST, e.name LIMIT ${size} OFFSET ${(page - 1) * size}`);
   const [{ n }] = (await d.execute(sql`SELECT count(*)::int AS n ${base}`)) as unknown as { n: number }[];
   return { rows: rows as unknown as ListRow[], total: n, page, size };
+}
+
+/** Active employees without a date of birth — they cannot open the worker page (card no. + date of birth). */
+export async function noDobCount() {
+  const [{ n }] = (await db().execute(sql`SELECT count(*)::int AS n FROM employees WHERE status = 'active' AND dob IS NULL`)) as unknown as { n: number }[];
+  return n;
 }
 
 export async function statusCounts() {

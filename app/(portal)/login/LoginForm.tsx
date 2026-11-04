@@ -18,6 +18,7 @@ export default function LoginForm({ notice }: { notice?: string }) {
       </button>
       {state ? <div className="alert err mt16"><Icon name="xCircle" size="sm" /><div>{state.message}</div></div> : null}
       <div className="dim mt16" style={{ fontSize: 12 }}>Forgot password? Ask the owner — passwords are reset on the server (no reset email).</div>
+      <a className="btn ghost mt16" style={{ width: "100%", justifyContent: "center" }} href="/worker/login">VEC worker? Check your salary <Icon name="arrowR" size="sm" /></a>
     </form>
   );
 }

@@ -351,6 +351,29 @@
 .vec-app .empty-cell { color: var(--text-3); font-style: italic; }
 .vec-app button { font: inherit; }
 
+/* worker page (phone first) */
+.vec-app .worker { min-height: 100vh; background: var(--bg); }
+.vec-app .worker-top { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--navy); color: #fff; }
+.vec-app .worker-top b { display: block; font: 600 14px var(--display); }
+.vec-app .worker-top span { font-size: 11.5px; opacity: .75; }
+.vec-app .worker-main { max-width: 860px; margin: 0 auto; padding: 16px; min-width: 0; }
+.vec-app .worker-facts, .vec-app .worker-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 20px; }
+.vec-app .worker-facts > div, .vec-app .worker-tiles > div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.vec-app .worker-facts span, .vec-app .worker-tiles span { font-size: 11.5px; }
+.vec-app .worker-tiles b { font: 600 19px var(--display); }
+.vec-app .worker-month { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-top: 1px solid var(--line); color: var(--text); }
+.vec-app .worker-month:hover { background: var(--brand-50); }
+.vec-app .worker-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.vec-app .worker-cal .dow { font-size: 11px; color: var(--text-3); text-align: center; }
+.vec-app .worker-cal .day { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0; border: 1px solid var(--line); border-radius: 6px; font-size: 11px; }
+.vec-app .worker-cal .code { min-width: 26px; }
+.vec-app .slips.worker-slip { display: block; overflow-x: auto; max-width: 100%; }
+.vec-app .worker-slip .slip { min-width: 560px; }
+@media print {
+  .vec-app .worker, .vec-app .worker-main { background: #fff; padding: 0; max-width: none; }
+  .vec-app .worker-slip .slip { min-width: 0; }
+}
+
 /* payslips: 2 slips per A4, cut along the dashed line */
 .vec-app .slips { display: grid; gap: 16px; }
 .vec-app .slip-page { display: grid; gap: 14px; }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { listEmployees, statusCounts, unitList } from "@/lib/employees";
+import { listEmployees, noDobCount, statusCounts, unitList } from "@/lib/employees";
 import { Icon } from "@/components/vec/Icon";
 import { Crumbs, PageHead, StatusBadge, fmtDate, initials } from "@/components/vec/ui";
 
@@ -10,9 +10,9 @@ export default async function Directory({ searchParams }: { searchParams: Promis
   await requireUser();
   const sp = await searchParams;
   const status = sp.status ?? "active";
-  const [list, counts, units] = await Promise.all([
+  const [list, counts, units, noDob] = await Promise.all([
     listEmployees({ q: sp.q, unit: sp.unit, status, missing: sp.missing, page: Number(sp.page) || 1 }),
-    statusCounts(), unitList(),
+    statusCounts(), unitList(), noDobCount(),
   ]);
   const qs = (o: Partial<SP>) => {
     const p = new URLSearchParams();
@@ -31,6 +31,10 @@ export default async function Directory({ searchParams }: { searchParams: Promis
         <a className="btn" href={`/portal/employees/export${sp.unit ? `?unit=${sp.unit}` : ""}`}><Icon name="download" size="sm" />Export Master Sheet</a>
         <Link className="btn primary" href="/portal/employees/new"><Icon name="userPlus" size="sm" />Add employee</Link>
       </PageHead>
+      {noDob ? <div className="alert warn" style={{ marginBottom: 12 }}><Icon name="alert" size="sm" /><div>
+        <b>{noDob} active employee{noDob > 1 ? "s have" : " has"} no date of birth</b>, so they cannot open their salary page (card number + date of birth).{" "}
+        <Link href={qs({ missing: "dob", page: undefined })}>Show them</Link> — add it on each person, or fill the Date of birth column of the <Link href="/portal/employees/import">import template</Link> and import it.
+      </div></div> : null}
       <div className="card">
         <div className="tabs" style={{ padding: "0 12px" }}>
           {tabs.map(([k, label, n]) => (
@@ -49,6 +53,7 @@ export default async function Directory({ searchParams }: { searchParams: Promis
             <option value="bank">Missing bank details</option>
             <option value="uan">PF member without UAN</option>
             <option value="aadhaar">Aadhaar not recorded</option>
+            <option value="dob">No date of birth (cannot open worker page)</option>
           </select>
           <button className="btn" type="submit"><Icon name="filter" size="sm" />Apply</button>
           {(sp.q || sp.unit || sp.missing) ? <Link className="btn ghost" href={`/portal/employees?status=${status}`}>Clear</Link> : null}
