@@ -29,7 +29,7 @@ const NAV: Section[] = [
       { t: "Working Salary", href: "/portal/payroll/working-salary" }, { t: "Approval & Lock", href: "/portal/payroll/approval" },
     ] },
     { t: "Statutory & Compliance", icon: "shield", items: [
-      { t: "PF / ESIC Challans", soon: "S7" }, { t: "Compliance Calendar", soon: "S7" },
+      { t: "PF / ESIC", href: "/portal/statutory" }, { t: "Compliance Calendar", soon: "S7" },
     ] },
   ] },
   { label: "Business", groups: [
