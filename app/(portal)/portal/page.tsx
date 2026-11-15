@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { recentActivity, statusCounts, unitSummary } from "@/lib/employees";
+import { backupStatus } from "@/lib/backup";
 import { Icon } from "@/components/vec/Icon";
 import { Alert, Crumbs, PageHead } from "@/components/vec/ui";
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
   const user = await requireUser();
-  const [counts, units, activity, sp] = await Promise.all([statusCounts(), unitSummary(), recentActivity(), searchParams]);
+  const [counts, units, activity, sp, backup] = await Promise.all([statusCounts(), unitSummary(), recentActivity(), searchParams, backupStatus()]);
+  const when = (d: Date) => d.toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
   const gaps = units.reduce((a, u) => ({ bank: a.bank + u.noBank, uan: a.uan + u.noUan, aadhaar: a.aadhaar + u.noAadhaar }), { bank: 0, uan: 0, aadhaar: 0 });
   const hour = Number(new Date().toLocaleString("en-IN", { hour: "numeric", hour12: false, timeZone: "Asia/Kolkata" }));
   const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -19,6 +21,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Link className="btn primary" href="/portal/employees/new"><Icon name="userPlus" size="sm" />Add employee</Link>
       </PageHead>
       {sp.denied ? <div style={{ marginBottom: 16 }}><Alert kind="warn">That page is for the owner account only.</Alert></div> : null}
+      {user.role === "owner" && backup.state !== "ok" ? <div style={{ marginBottom: 16 }}><Alert kind={backup.state === "old" ? "warn" : "err"}>
+        {backup.state === "none" ? <><b>Database backup is not running.</b> Nothing has been backed up to the bucket yet — run the backup fix on the server (VEC-Server-Setupix-backup.sh).</>
+          : backup.state === "failed" ? <><b>Last database backup failed</b> ({when(backup.at)}): {backup.error}. Fix it, then test with <span className="mono">sudo /opt/vec/bin/backup.sh --check</span>.</>
+          : <><b>No database backup for {Math.floor(backup.hours / 24)} days</b> — the last one was {when(backup.at)}. Check /var/log/vec-backup.log on the server.</>}
+      </Alert></div> : null}
+      {user.role === "owner" && backup.state === "ok" ? <div className="dim" style={{ fontSize: 12, margin: "-6px 0 12px" }}><Icon name="shield" size="sm" /> Database backed up {when(backup.at)} · {(backup.bytes / 1048576).toFixed(1)} MB · {backup.copies} daily copies in the bucket</div> : null}
       {counts.all === 0 ? (
         <div className="card" style={{ marginBottom: 16 }}><div className="empty">
           <div className="big"><Icon name="users" size="lg" /></div>
