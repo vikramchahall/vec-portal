@@ -33,7 +33,7 @@ const NAV: Section[] = [
     ] },
   ] },
   { label: "Business", groups: [
-    { t: "Operations", icon: "factory", items: [{ t: "Sites & Units", href: "/portal/sites" }] },
+    { t: "Operations", icon: "factory", items: [{ t: "Sites & Units", href: "/portal/sites" }, { t: "Website enquiries", href: "/portal/enquiries" }] },
     { t: "Finance", icon: "rupee", items: [{ t: "Billing & Profitability", soon: "P2" }] },
     { t: "Reports & Analytics", icon: "chart", items: [{ t: "Reports", soon: "S9" }] },
   ] },

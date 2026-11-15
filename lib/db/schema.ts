@@ -226,3 +226,33 @@ export const siteSalaryFiles = pgTable("site_salary_files", {
   uploadedBy: text("uploaded_by").notNull(),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Website forms (contact / tender invite / vendor registration, and job applications) — read on Portal → Website enquiries.
+export const enquiries = pgTable("enquiries", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull().default("enquiry"), // enquiry | tender_invite | vendor_registration
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  company: text("company"),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("new"), // new | replied | closed
+  note: text("note"),
+  ipHash: text("ip_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index("enquiries_created").on(t.createdAt)]);
+
+export const jobApplications = pgTable("job_applications", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  city: text("city"),
+  position: text("position").notNull(),
+  experienceYears: integer("experience_years"),
+  message: text("message"),
+  status: text("status").notNull().default("new"), // new | called | shortlisted | not_suitable
+  note: text("note"),
+  ipHash: text("ip_hash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index("job_applications_created").on(t.createdAt)]);

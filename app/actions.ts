@@ -1,6 +1,9 @@
 "use server";
 
-import { getPublicClient } from "@/lib/supabase";
+import { createHash } from "node:crypto";
+import { headers } from "next/headers";
+import { sql } from "drizzle-orm";
+import { db, isDbConfigured, schema } from "@/lib/db";
 
 export type FormState = { ok: boolean; message: string } | null;
 
@@ -16,6 +19,18 @@ function validEmail(v: string) {
 
 function validPhone(v: string) {
   return v === "" || /^[\d\s+()-]{7,20}$/.test(v);
+}
+
+/* Forms are stored in the portal database (Portal → Website enquiries). The visitor's IP is kept only as a
+   salted hash, to stop one sender filling the inbox: at most 5 forms an hour from the same address. */
+async function sender(): Promise<{ ipHash: string; tooMany: boolean } | null> {
+  if (!isDbConfigured()) return null;
+  const h = await headers();
+  const ip = h.get("x-real-ip") ?? h.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+  const ipHash = createHash("sha256").update(`${process.env.SESSION_SECRET ?? ""}|${ip}`).digest("hex").slice(0, 32);
+  const [{ n }] = (await db().execute(sql`SELECT (SELECT count(*) FROM enquiries WHERE ip_hash = ${ipHash} AND created_at > now() - interval '1 hour')
+    + (SELECT count(*) FROM job_applications WHERE ip_hash = ${ipHash} AND created_at > now() - interval '1 hour') AS n`)) as unknown as { n: number }[];
+  return { ipHash, tooMany: Number(n) >= 5 };
 }
 
 /* ------------------------------------------------------------------ */
@@ -51,26 +66,14 @@ export async function submitEnquiry(
   const allowedTypes = ["enquiry", "tender_invite", "vendor_registration"];
   const safeType = allowedTypes.includes(type) ? type : "enquiry";
 
-  const supabase = getPublicClient();
-  if (!supabase) {
-    return {
-      ok: false,
-      message:
-        "The enquiry form is not connected yet. Please email us directly at vikramengineeringco@gmail.com.",
-    };
-  }
-
-  const { error } = await supabase
-    .from("enquiries")
-    .insert({ name, email: email || null, phone: phone || null, company: company || null, message, type: safeType });
-
-  if (error) {
-    console.error("enquiry insert failed:", error.message);
-    return {
-      ok: false,
-      message:
-        "Something went wrong saving your enquiry. Please email vikramengineeringco@gmail.com instead.",
-    };
+  const who = await sender();
+  if (!who) return { ok: false, message: "The enquiry form is not connected yet. Please email us directly at vikramengineeringco@gmail.com." };
+  if (who.tooMany) return { ok: false, message: "We have already received several messages from you — we will be in touch. For anything urgent please call +91 94174 85423." };
+  try {
+    await db().insert(schema.enquiries).values({ name, email: email || null, phone: phone || null, company: company || null, message, type: safeType, ipHash: who.ipHash });
+  } catch (e) {
+    console.error("enquiry insert failed:", e instanceof Error ? e.message : e);
+    return { ok: false, message: "Something went wrong saving your enquiry. Please email vikramengineeringco@gmail.com instead." };
   }
 
   return {
@@ -111,32 +114,14 @@ export async function submitApplication(
   if (years !== null && (Number.isNaN(years) || years < 0 || years > 60))
     return { ok: false, message: "Please enter your experience in years." };
 
-  const supabase = getPublicClient();
-  if (!supabase) {
-    return {
-      ok: false,
-      message:
-        "The application form is not connected yet. Please WhatsApp or call +91 94174 85423.",
-    };
-  }
-
-  const { error } = await supabase.from("job_applications").insert({
-    name,
-    phone,
-    email: email || null,
-    city: city || null,
-    position_applied: position,
-    experience_years: years,
-    message: message || null,
-  });
-
-  if (error) {
-    console.error("application insert failed:", error.message);
-    return {
-      ok: false,
-      message:
-        "Something went wrong. Please call or WhatsApp +91 94174 85423 instead.",
-    };
+  const who = await sender();
+  if (!who) return { ok: false, message: "The application form is not connected yet. Please WhatsApp or call +91 94174 85423." };
+  if (who.tooMany) return { ok: false, message: "We have already received your application — if there is a suitable opening we will call you." };
+  try {
+    await db().insert(schema.jobApplications).values({ name, phone, email: email || null, city: city || null, position, experienceYears: years, message: message || null, ipHash: who.ipHash });
+  } catch (e) {
+    console.error("application insert failed:", e instanceof Error ? e.message : e);
+    return { ok: false, message: "Something went wrong. Please call or WhatsApp +91 94174 85423 instead." };
   }
 
   return {
