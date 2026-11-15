@@ -61,7 +61,7 @@ export async function statusCounts() {
 }
 
 export async function unitList() {
-  return db().select({ id: units.id, code: units.code, name: units.name, siteName: sites.name, siteState: sites.state, workOrders: units.workOrders, mode: units.mode })
+  return db().select({ id: units.id, code: units.code, name: units.name, siteCode: sites.code, siteName: sites.name, siteState: sites.state, workOrders: units.workOrders, mode: units.mode })
     .from(units).innerJoin(sites, eq(sites.id, units.siteId)).orderBy(asc(units.sortOrder));
 }
 

@@ -53,7 +53,7 @@ export default async function WorkerMonthPage({ params }: { params: Promise<{ ru
           </div>
         </div>
 
-        <div className="card no-print" style={{ marginBottom: 16 }}>
+        {row.site ? null : <div className="card no-print" style={{ marginBottom: 16 }}>
           <div className="card-h"><Icon name="sun" size="sm" /><h3>Leave balance</h3></div>
           <div className="tbl-wrap"><table className="tbl compact">
             <thead><tr><th></th><th className="num" title="Brought forward from last month">B/F</th><th className="num">Earned</th><th className="num">Used</th><th className="num">Balance</th></tr></thead>
@@ -63,7 +63,7 @@ export default async function WorkerMonthPage({ params }: { params: Promise<{ ru
             </tbody>
           </table></div>
           <div className="card-b dim" style={{ fontSize: 12 }}>B/F = brought forward from last month. Absent days are covered by your Leave first, then Casual leave. You earn 0.064 Leave for every day worked; extra hours on duty add to Casual leave (8 hours = 1 day).</div>
-        </div>
+        </div>}
 
         <div className="row no-print" style={{ justifyContent: "space-between", marginBottom: 8 }}><h3 style={{ margin: 0 }}>Payslip</h3><PrintButton /></div>
         <div className="slips worker-slip"><div className="slip-page"><Slip r={row} unit={m.unit} monthName={title} days={days} /></div></div>

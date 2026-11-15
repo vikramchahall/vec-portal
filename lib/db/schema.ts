@@ -214,3 +214,15 @@ export const excelTemplates = pgTable("excel_templates", {
   uploadedBy: text("uploaded_by").notNull(),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// File-mode units (STP, HZL): the site's own Working Salary workbook for the month, as uploaded, and the
+// person rows read from it (codes, earnings, deductions, net) — the month's salary for that unit.
+export const siteSalaryFiles = pgTable("site_salary_files", {
+  runId: integer("run_id").primaryKey().references(() => monthRuns.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  file: bytea("file").notNull(),
+  rows: jsonb("rows").notNull(),
+  warnings: jsonb("warnings").notNull().default([]),
+  uploadedBy: text("uploaded_by").notNull(),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow().notNull(),
+});

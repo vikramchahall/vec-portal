@@ -5,13 +5,13 @@ import { monthSalary } from "@/lib/payroll";
 /**
  * PF and ESIC for one establishment and month (MBD-01 S7). Units are filed together by the first part of
  * their code — ETP-PET + ETP-REF = "ETP", WB-PET + WB-REF = "WB", DRIVERS on its own — as in the Sep-26
- * "ESIC & EPFO Combined" workbooks. Amounts come from the Working Salary lines, so they always agree with it:
+ * "ESIC & EPFO Combined" workbooks; each HZL site is its own group. Amounts come from the Working Salary lines, so they always agree with it:
  *   EPF wages  = MIN(gross − HRA, PF ceiling)   (0 for non-members)
  *   EPS wages  = MIN(EPF wages, EPS ceiling)    (both ₹25,000 under the 2026 rule)
  *   EPS 8.33%  = ROUND(EPS wages × 8.33%);  EPF–EPS difference = employee 12% − EPS
  *   ESIC wages = total earning + monthly bonus (ESIC members with a contribution)
  */
-export const groupOf = (unitCode: string) => unitCode.split("-")[0].toUpperCase();
+export const groupOf = (unitCode: string) => (unitCode.startsWith("HZL-") ? unitCode : unitCode.split("-")[0].toUpperCase());
 export const EPS_CEILING = 25000;
 
 export type StatRow = {
@@ -30,7 +30,7 @@ export type StatMonth = {
 export async function statutoryGroups() {
   const units = await unitList();
   const g = new Map<string, string[]>();
-  for (const u of units.filter((x) => x.mode === "punch")) g.set(groupOf(u.code), [...(g.get(groupOf(u.code)) ?? []), u.code]);
+  for (const u of units) g.set(groupOf(u.code), [...(g.get(groupOf(u.code)) ?? []), u.code]);
   return [...g.entries()].map(([group, codes]) => ({ group, codes }));
 }
 
@@ -51,10 +51,12 @@ export async function statutoryMonth(group: string, year: number, month: number)
     const ceiling = ms.settings.pfCeiling;
     for (const r of lines) {
       const l = r.line!;
-      const epfWages = r.pf && l.pf > 0 ? Math.min(l.gross - l.earnedHra, ceiling) : 0;
+      // site files (HZL: PF on Basic + DA + other allowance) — the wages are the ones the site's 12% was taken on
+      const epfWages = !(r.pf && l.pf > 0) ? 0 : r.site ? Math.min(Math.round(l.pf / 0.12), ceiling) : Math.min(l.gross - l.earnedHra, ceiling);
       const epsWages = Math.min(epfWages, EPS_CEILING);
       const eps = Math.round(epsWages * 0.0833);
-      const esicWages = r.esi && l.esi > 0 ? l.totalEarning + l.bonus : 0;
+      // ESIC wages: total earning + monthly bonus (HMEL); a site that took ESIC on total earning alone keeps that
+      const esicWages = !(r.esi && l.esi > 0) ? 0 : r.site && Math.ceil(l.totalEarning * 0.0075) === l.esi ? l.totalEarning : l.totalEarning + l.bonus;
       rows.push({
         unit: code, card: r.p.card, regNo: r.regNo, name: r.p.name, designation: r.p.designation ?? null, category: r.category,
         uan: r.uan, esicIp: r.esicIp, pf: epfWages > 0, esi: esicWages > 0,

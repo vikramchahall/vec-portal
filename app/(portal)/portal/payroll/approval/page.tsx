@@ -19,7 +19,7 @@ export default async function Approval({ searchParams }: { searchParams: Promise
   const months = await punchMonths();
   const month = sp.month ?? months[0]?.month ?? new Date().toISOString().slice(0, 7);
   const [y, m] = month.split("-").map(Number);
-  const units = (await unitList()).filter((u) => u.mode === "punch");
+  const units = (await unitList());
   const all = await Promise.all(units.map(async (u) => ({ u, ms: await monthSalary(u.code, y, m) })));
   const monthName = new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en-IN", { month: "long", year: "numeric", timeZone: "UTC" });
   const owner = user.role === "owner";

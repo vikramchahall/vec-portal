@@ -19,7 +19,8 @@ export function approvalChecks(ms: MonthSalary): Check[] {
   const noStruct = ms.rows.filter((r) => r.problem);
   return [
     { ok: ms.rows.length > 0, text: `${ms.rows.length} employees with day codes` },
-    { ok: ms.run.holidays.length > 0, text: ms.run.holidays.length ? `Holidays set: ${ms.run.holidays.join(", ")}` : "No holidays set for the month" },
+    ms.rows.some((r) => r.site) ? { ok: true, text: "Holidays and days payable as in the site file" }
+      : { ok: ms.run.holidays.length > 0, text: ms.run.holidays.length ? `Holidays set: ${ms.run.holidays.join(", ")}` : "No holidays set for the month" },
     { ok: blocks.length === 0, text: blocks.length ? `${blocks.length} blocking exception${blocks.length > 1 ? "s" : ""} open (${[...new Set(blocks.map((b) => b.kind))].join(", ")})` : "No blocking exceptions" },
     { ok: noStruct.length === 0, text: noStruct.length ? `${noStruct.length} without a pay structure` : "Everyone has a pay structure" },
   ];

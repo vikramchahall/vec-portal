@@ -52,6 +52,8 @@ export async function monthAttendance(unitCode: string, year: number, month: num
     const persons = snaps.map((s) => revive((s.data as { p: SerializedPerson }).p)).sort((a, b) => (Number(a.registerNo) || 9999) - (Number(b.registerNo) || 9999) || a.name.localeCompare(b.name));
     return { ...tc, run, persons, exceptions: [] };
   }
+  const [{ mode }] = await d.select({ mode: schema.units.mode }).from(schema.units).where(eq(schema.units.id, tc.unit.id));
+  if (mode === "file") return siteAttendance(tc, run, year, month);
   const ov = await d.select().from(schema.dayOverrides).where(eq(schema.dayOverrides.runId, run.id));
   const ids = tc.people.map((p) => p.employeeId).filter((x): x is number => x !== null);
   const opening = ids.length ? await d.select().from(schema.leaveOpening).where(and(eq(schema.leaveOpening.month, monthStart(year, month)), sql`${schema.leaveOpening.employeeId} IN (${sql.join(ids.map((i) => sql`${i}`), sql`, `)})`)) : [];
@@ -113,4 +115,23 @@ export async function monthAttendance(unitCode: string, year: number, month: num
   const order = { block: 0, review: 1, info: 2 };
   ex.sort((a, b) => order[a.severity] - order[b.severity]);
   return { ...tc, run, persons, exceptions: ex };
+}
+
+/** File-mode units (STP, HZL): the people, day codes and days payable come from the month's uploaded site file. */
+async function siteAttendance(tc: TcResult, run: typeof schema.monthRuns.$inferSelect, year: number, month: number): Promise<MonthAttendance> {
+  const [f] = await db().select({ rows: schema.siteSalaryFiles.rows, warnings: schema.siteSalaryFiles.warnings }).from(schema.siteSalaryFiles).where(eq(schema.siteSalaryFiles.runId, run.id));
+  const rows = (f?.rows ?? []) as { card: string; employeeId: number; name: string; designation: string | null; doj: string | null; days: number; lop: number; codes: string[] | null }[];
+  const persons: PersonMonth[] = rows.map((r) => {
+    const final = (r.codes ?? []).slice(0, tc.days) as Code[];
+    const cnt = (...cs: string[]) => final.filter((c) => cs.includes(c)).length;
+    const counts = { P: cnt("P", "NP", "OD"), H: cnt("H"), HP: cnt("HP"), WO: cnt("WO"), L: cnt("L"), CL: cnt("CL"), X: r.lop, payable: r.days };
+    const zero = { cl: 0, l: 0 };
+    const b = { final, counts, coff: { excess: 0, less: 0, clHours: 0, totalCl: 0 }, avail: zero, bf: zero, credit: zero, used: zero, close: zero } as Balances;
+    const tp = tc.people.find((p) => p.employeeId === r.employeeId);
+    return { card: r.card, employeeId: r.employeeId, vecId: tp?.vecId ?? null, name: r.name, designation: r.designation, registerNo: tp?.registerNo ?? null, known: true, duties: [],
+      doj: r.doj, woWeekday: tp?.woWeekday ?? null, status: tp?.status ?? null, raw: final, final, b, overrides: new Map(), hasOpening: true };
+  });
+  const exceptions: Exception[] = f ? (f.warnings as string[]).map((w) => ({ kind: "SITE_FILE", severity: "info" as const, card: "", employeeId: null, name: "", detail: w }))
+    : [{ kind: "NO_SITE_FILE", severity: "block", card: "", employeeId: null, name: "", detail: `Upload the site's Working Salary file for ${month}/${year} (Payroll → Site salary file)` }];
+  return { ...tc, run, persons, exceptions };
 }

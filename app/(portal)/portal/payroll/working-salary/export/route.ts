@@ -45,6 +45,10 @@ export async function GET(req: Request) {
     for (const e of enc) if (e.account_enc) accounts.set(e.id, decrypt(e.account_enc));
   }
 
+  // file-mode units: the site's own workbook as uploaded for the month
+  const [siteFile] = await db().select({ fileName: schema.siteSalaryFiles.fileName, file: schema.siteSalaryFiles.file }).from(schema.siteSalaryFiles).where(eq(schema.siteSalaryFiles.runId, ms.run.id));
+  if (siteFile) return new Response(new Uint8Array(siteFile.file), { headers: { "Content-Type": "application/vnd.ms-excel.sheet.macroEnabled.12", "Content-Disposition": `attachment; filename="${siteFile.fileName.replace(/[^\w.\- &()]/g, "_")}"`, "Cache-Control": "no-store" } });
+
   // the unit's own workbook (Sites & Units), filled with this month — unless ?plain=1
   const [tpl] = q.get("plain") ? [] : await db().select().from(schema.excelTemplates).where(eq(schema.excelTemplates.unitId, ms.unit.id));
   if (tpl) {

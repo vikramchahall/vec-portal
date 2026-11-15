@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { monthAttendance, revive, type MonthAttendance, type PersonMonth, type SerializedPerson } from "@/lib/codes";
 import { calcSalary, salarySettings, type SalaryLine } from "@/lib/engine/salary";
+import type { StoredSiteRow } from "@/lib/site-salary";
 
 export type PayRow = {
   p: PersonMonth; line: SalaryLine | null; problem: string | null;
@@ -11,6 +12,8 @@ export type PayRow = {
   pf: boolean; esi: boolean; bonusMonthly: boolean;
   bank: { name: string | null; last4: string | null; ifsc: string | null }; uan: string | null; esicIp: string | null; pfAccount: string | null;
   adj: { otDays: number; hold: number; leaveEncashment: number; reason: string } | null;
+  /** file-mode units: the slip shows the site's own earning and deduction heads */
+  site?: { earnings: [string, number][]; deductions: [string, number][]; fixedGross: number };
 };
 export type MonthSalary = MonthAttendance & { rows: PayRow[]; totals: Record<string, number>; settings: ReturnType<typeof salarySettings> };
 
@@ -33,6 +36,7 @@ export async function monthSalary(unitCode: string, year: number, month: number)
     const rows: PayRow[] = ma.persons.map((p) => ({ ...byEmp.get(p.employeeId!)!, p: revive(byEmp.get(p.employeeId!)!.p) }));
     return { ...ma, rows, totals: totalsOf(rows), settings };
   }
+  const [{ mode }] = await db().select({ mode: schema.units.mode }).from(schema.units).where(eq(schema.units.id, ma.unit.id));
   const ids = ma.persons.filter((p) => p.known).map((p) => p.employeeId!);
   const monthEnd = `${year}-${String(month).padStart(2, "0")}-${String(ma.days).padStart(2, "0")}`;
   const info = ids.length ? (await db().execute(sql`SELECT e.id, e.pf_member, e.esi_member, e.bonus_monthly, e.bank_name, e.account_last4, e.ifsc, e.uan, e.esic_ip, e.pf_account, e.doj::text AS doj,
@@ -45,6 +49,21 @@ export async function monthSalary(unitCode: string, year: number, month: number)
   const adjRows = await db().select().from(schema.payAdjustments).where(eq(schema.payAdjustments.runId, ma.run.id));
   const adjBy = new Map(adjRows.map((a) => [a.employeeId, { otDays: Number(a.otDays), hold: a.hold, leaveEncashment: a.leaveEncashment, reason: a.reason }]));
 
+  if (mode === "file") {
+    const [f] = await db().select({ rows: schema.siteSalaryFiles.rows }).from(schema.siteSalaryFiles).where(eq(schema.siteSalaryFiles.runId, ma.run.id));
+    const site = new Map(((f?.rows ?? []) as StoredSiteRow[]).map((r) => [r.employeeId, r]));
+    const rows: PayRow[] = ma.persons.map((p) => {
+      const r = byId.get(p.employeeId!) ?? {}, x = site.get(p.employeeId!)!;
+      return {
+        p, problem: null, regNo: (r.register_no as string) ?? null, category: x.category ?? (r.category as string) ?? null, doj: x.doj, isDriver: false, structure: null,
+        pf: x.pfEE > 0, esi: x.esiEE > 0, bonusMonthly: x.bonus > 0,
+        bank: { name: (r.bank_name as string) ?? null, last4: (r.account_last4 as string) ?? null, ifsc: (r.ifsc as string) ?? null },
+        uan: (r.uan as string) ?? null, esicIp: (r.esic_ip as string) ?? null, pfAccount: (r.pf_account as string) ?? null, adj: null,
+        line: siteLine(x), site: { earnings: x.earnings, deductions: x.deductions, fixedGross: x.fixedGross },
+      };
+    });
+    return { ...ma, rows, totals: totalsOf(rows), settings };
+  }
   const rows: PayRow[] = ma.persons.filter((p) => p.known && p.b).map((p) => {
     const r = byId.get(p.employeeId!) ?? {};
     const structure = r.basic_da !== null && r.basic_da !== undefined
@@ -69,4 +88,21 @@ export async function monthSalary(unitCode: string, year: number, month: number)
     return { ...base, line, problem: null };
   });
   return { ...ma, rows, totals: totalsOf(rows), settings };
+}
+
+/** A site-file row in the Working Salary line shape (amounts as the site worked them out; never recalculated). */
+function siteLine(x: StoredSiteRow): SalaryLine {
+  const get = (re: RegExp) => Math.round(x.earnings.filter(([k]) => re.test(k)).reduce((s, [, v]) => s + v, 0));
+  const basicDa = get(/^basic|^da$/i), hra = get(/^hra$/i), conv = get(/conveyance/i);
+  const extra = x.totalEarning - x.gross; // OT, holiday pay, night allowance
+  const R = Math.round;
+  return {
+    basic: 0, daMw: 0, fullBasicDa: 0, payableDays: x.days, lop: x.lop,
+    earnedBasicDa: basicDa, earnedDa: 0, earnedHra: hra, earnedSpecial: x.gross - basicDa - hra - conv, earnedConveyance: conv, gross: x.gross,
+    otDays: 0, hpDays: 0, otAmount: 0, hpAmount: extra, totalEarning: x.totalEarning,
+    pf: R(x.pfEE), esi: R(x.esiEE), lwf: R(x.lwfEE), pfEmployer: R(x.pfER), esiEmployer: R(x.esiER), lwfEmployer: R(x.lwfER),
+    bonus: R(x.bonus), annualBonus: 0, leaveEncashment: 0, net: x.net + R(x.pt), pt: R(x.pt), netAfterPt: x.net, hold: x.hold,
+    ctc: x.ctc, ctcBilling: x.ctcBilling || x.ctc - x.hold,
+    full: { basicDa: 0, da: 0, hra: 0, special: 0, conveyance: 0, gross: x.fixedGross, pf: 0, esi: 0, pfEmployer: 0, esiEmployer: 0, bonus: 0, net: 0, ctc: 0 },
+  };
 }
