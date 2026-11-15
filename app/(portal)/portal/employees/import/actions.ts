@@ -13,7 +13,8 @@ export type PreviewFile = { file: string; kind: string; warnings: string[]; rows
 export type PreviewState = { files: PreviewFile[]; monthStart: string } | { error: string } | null;
 
 type Existing = { id: number; card_no: string; name: string; unit: string | null; designation: string | null; category: string | null; basic_da: number | null; hra: number | null; special: number | null; conveyance: number | null;
-  uan: string | null; ifsc: string | null; bank_name: string | null; account_last4: string | null; register_no: string | null };
+  uan: string | null; ifsc: string | null; bank_name: string | null; account_last4: string | null; register_no: string | null;
+  dob: string | null; doj: string | null; father_name: string | null; gender: string | null; mobile: string | null; aadhaar_last4: string | null; esic_ip: string | null; pf_account: string | null; status: string; dol: string | null };
 
 export async function previewImport(_prev: PreviewState, form: FormData): Promise<PreviewState> {
   await requireUser();
@@ -21,7 +22,9 @@ export async function previewImport(_prev: PreviewState, form: FormData): Promis
   const monthStart = String(form.get("monthStart") ?? "") || "2026-10-01";
   const files = form.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
   if (!files.length) return { error: "Choose at least one .xlsx file." };
-  const units = new Set((await unitList()).map((u) => u.code));
+  const unitRows = await unitList();
+  const units = new Set(unitRows.map((u) => u.code));
+  const fileUnits = new Set(unitRows.filter((u) => u.mode === "file").map((u) => u.code));
 
   const parsed: PreviewFile[] = [];
   for (const f of files) {
@@ -35,7 +38,8 @@ export async function previewImport(_prev: PreviewState, form: FormData): Promis
   }
 
   const cards = parsed.flatMap((p) => p.rows.map((r) => r.cardNo));
-  const existing = cards.length ? (await db().execute(sql`SELECT e.id, c.card_no, e.name, u.code AS unit, a.designation, a.category, p.basic_da, p.hra, p.special, p.conveyance, e.uan, e.ifsc, e.bank_name, e.account_last4, a.register_no
+  const existing = cards.length ? (await db().execute(sql`SELECT e.id, c.card_no, e.name, u.code AS unit, a.designation, a.category, p.basic_da, p.hra, p.special, p.conveyance, e.uan, e.ifsc, e.bank_name, e.account_last4, a.register_no,
+      e.dob::text AS dob, e.doj::text AS doj, e.father_name, e.gender, e.mobile, e.aadhaar_last4, e.esic_ip, e.pf_account, e.status, e.dol::text AS dol
     FROM employee_cards c JOIN employees e ON e.id = c.employee_id
     LEFT JOIN LATERAL (SELECT * FROM assignments a WHERE a.employee_id = e.id AND a.valid_to IS NULL LIMIT 1) a ON true
     LEFT JOIN units u ON u.id = a.unit_id
@@ -46,8 +50,10 @@ export async function previewImport(_prev: PreviewState, form: FormData): Promis
   for (const p of parsed) for (const r of p.rows) {
     if (!r.unitCode) r.problems.push("No unit chosen");
     else if (!units.has(r.unitCode)) r.problems.push(`Unknown unit ${r.unitCode}`);
-    if (r.basicDa === undefined) r.problems.push("No Basic + DA");
     const e = byCard.get(r.cardNo);
+    // a new person paid from gate punches needs a pay structure; leavers and site-file units (STP, HZL) do not
+    // (from a salary workbook only — the employee template may carry personal details alone; Working Salary flags anyone without a structure)
+    if (!e && p.kind === "salary-workbook" && r.basicDa === undefined && r.status !== "left" && r.unitCode && !fileUnits.has(r.unitCode)) r.problems.push("No Basic + DA");
     if (!e) continue;
     r.employeeId = e.id;
     const diff = (label: string, before: unknown, after: unknown) => {
@@ -65,7 +71,19 @@ export async function previewImport(_prev: PreviewState, form: FormData): Promis
     diff("IFSC", e.ifsc, r.ifsc);
     diff("bank", e.bank_name, r.bankName);
     if (r.account && r.account.slice(-4) !== e.account_last4) r.changes.push("bank account changed");
-    if (e.name !== r.name) r.changes.push(`name: ${e.name} → ${r.name}`);
+    diff("date of birth", e.dob, r.dob);
+    diff("date of joining", e.doj, r.doj);
+    diff("father's name", e.father_name, r.fatherName);
+    diff("gender", e.gender, r.gender);
+    diff("mobile", e.mobile, r.mobile);
+    diff("ESIC no.", e.esic_ip, r.esicIp);
+    diff("PF account", e.pf_account, r.pfAccount);
+    diff("status", e.status, r.status);
+    diff("date of leaving", e.dol, r.dol);
+    if (r.aadhaar && r.aadhaar.slice(-4) !== e.aadhaar_last4) r.changes.push("Aadhaar added / changed");
+    // a salary workbook may correct a name; the employee template (lists from other files) never renames anyone
+    if (p.kind === "salary-workbook" && e.name.replace(/\s+/g, "") !== r.name.replace(/\s+/g, "")) r.changes.push(`name: ${e.name} → ${r.name}`);
+    else r.name = e.name;
     r.action = r.changes.length ? "update" : "same";
   }
   return { files: parsed, monthStart };
@@ -95,7 +113,7 @@ export async function applyImport(rows: PreviewRow[], monthStart: string): Promi
       const res = await saveEmployee(r.employeeId, {
         name: r.name, fatherName: r.fatherName, dob: r.dob, gender: r.gender, mobile: r.mobile, aadhaar: r.aadhaar, pan: r.pan,
         uan: r.uan, pfAccount: r.pfAccount, esicIp: r.esicIp, pfMember: r.pfMember, esiMember: r.esiMember, bonusMonthly: r.bonusMonthly,
-        bankName: r.bankName, account: r.account, ifsc: r.ifsc, doj: r.doj, status: isNew ? "active" : undefined,
+        bankName: r.bankName, account: r.account, ifsc: r.ifsc, doj: r.doj, status: r.status ?? (isNew ? "active" : undefined), dol: r.dol, notes: r.notes,
         cardNo: r.cardNo, unitCode: r.unitCode, registerNo: r.registerNo, designation: r.designation, category: r.category,
         woWeekday: r.woWeekday ?? (isNew ? "Sun" : undefined), isDriver: r.isDriver,
         basicDa: r.basicDa, hra: r.hra, special: r.special, conveyance: r.conveyance, others: r.others,

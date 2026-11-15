@@ -244,6 +244,13 @@ export async function saveEmployee(id: number | null, x: EmployeeInput): Promise
         changes.push(`structure from ${structureFrom}: Basic+DA ${next.basicDa}, HRA ${next.hra}`);
       }
     }
+    // a leaver's unit and card end on the leaving day, so later months no longer expect him
+    if (core.status === "left" && core.dol) {
+      const dol = core.dol as string;
+      const a = await tx.update(assignments).set({ validTo: dol }).where(and(eq(assignments.employeeId, empId), isNull(assignments.validTo), sql`${assignments.validFrom} <= ${dol}::date`)).returning({ id: assignments.id });
+      const c = await tx.update(employeeCards).set({ validTo: dol }).where(and(eq(employeeCards.employeeId, empId), isNull(employeeCards.validTo), sql`${employeeCards.validFrom} <= ${dol}::date`)).returning({ id: employeeCards.id });
+      if (a.length || c.length) changes.push(`left on ${dol}: unit and card closed`);
+    }
     return { id: empId, changes };
   });
 }

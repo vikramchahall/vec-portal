@@ -15,6 +15,7 @@ export type ImportRow = {
   pfMember?: boolean; esiMember?: boolean; bonusMonthly?: boolean;
   uan?: string; pfAccount?: string; esicIp?: string; bankName?: string; account?: string; ifsc?: string;
   fatherName?: string; dob?: string; gender?: string; mobile?: string; aadhaar?: string; pan?: string;
+  status?: "active" | "left" | "on_hold"; dol?: string; notes?: string;
   leave?: { clBf: number; lBf: number; clClose: number; lClose: number }; // from the Attendance Format sheet
 };
 export type ParseResult = { kind: "salary-workbook" | "template"; rows: ImportRow[]; warnings: string[]; sheets: string[] };
@@ -27,6 +28,7 @@ export const TEMPLATE_COLUMNS: [keyof ImportRow, string][] = [
   ["esiMember", "ESIC member (Y/N)"], ["bonusMonthly", "Monthly bonus (Y/N)"], ["uan", "UAN"], ["pfAccount", "PF account no"],
   ["esicIp", "ESIC IP no"], ["bankName", "Bank"], ["account", "Account no"], ["ifsc", "IFSC"], ["fatherName", "Father's name"],
   ["dob", "Date of birth"], ["gender", "Gender"], ["mobile", "Mobile"], ["aadhaar", "Aadhaar"], ["pan", "PAN"],
+  ["status", "Status"], ["dol", "Date of leaving"], ["notes", "Notes"],
 ];
 
 type Grid = unknown[][];
@@ -55,7 +57,8 @@ export function toIsoDate(v: unknown): string | undefined {
 const cardOf = (v: unknown) => {
   if (typeof v === "number" && Number.isInteger(v) && v > 0) return String(v);
   const s = String(v ?? "").trim();
-  return /^[A-Za-z0-9-]{3,20}$/.test(s) && /\d/.test(s) ? s : undefined;
+  // gate cards are digits; HZL codes are letters + digits; people without a gate pass get NEW-<UNIT>-<NAME>
+  return /^[A-Za-z0-9-]{3,40}$/.test(s) && (/\d/.test(s) || /^NEW-/i.test(s)) ? s.toUpperCase() : undefined;
 };
 
 function grid(wb: XLSX.WorkBook, name: string): Grid {
@@ -190,6 +193,15 @@ function parseSalaryWorkbook(wb: XLSX.WorkBook, warnings: string[]): ImportRow[]
   return rows;
 }
 
+/** "Left" / "active" / "on hold"; a leaving date alone also means left. */
+const statusOf = (v: unknown, dol: unknown): ImportRow["status"] => {
+  const s = norm(v);
+  if (s.startsWith("left") || s === "inactive" || s === "relieved") return "left";
+  if (s.startsWith("on hold") || s === "hold") return "on_hold";
+  if (s.startsWith("active") || s.startsWith("working") || s.startsWith("till present")) return "active";
+  return toIsoDate(dol) ? "left" : undefined;
+};
+
 function parseTemplate(wb: XLSX.WorkBook, warnings: string[]): ImportRow[] {
   const g = grid(wb, TEMPLATE_SHEET);
   const h = headerRow(g, ["card / employee code", "name"]);
@@ -211,6 +223,7 @@ function parseTemplate(wb: XLSX.WorkBook, warnings: string[]): ImportRow[] {
       bankName: text(get("bankName"))?.toUpperCase(), account: digits(get("account")), ifsc: text(get("ifsc"))?.toUpperCase(),
       fatherName: text(get("fatherName"))?.toUpperCase(), dob: toIsoDate(get("dob")), gender: text(get("gender")), mobile: text(get("mobile")),
       aadhaar: digits(get("aadhaar")), pan: text(get("pan"))?.toUpperCase(),
+      status: statusOf(get("status"), get("dol")), dol: toIsoDate(get("dol")), notes: text(get("notes")),
     });
     const last = rows[rows.length - 1];
     last.isDriver = last.designation === "DRIVER";
@@ -235,7 +248,7 @@ export function parseWorkbook(buf: ArrayBuffer | Buffer): ParseResult {
 export function templateWorkbook(): Buffer {
   const ws = XLSX.utils.aoa_to_sheet([
     TEMPLATE_COLUMNS.map(([, l]) => l),
-    ["46860001", "SAMPLE NAME", "STP", "1", "OPERATOR", "SEMI SKILLED", "01-10-2026", "Sun", 17186, 0, 0, 0, 0, "Y", "Y", "Y", "", "", "", "STATE BANK OF INDIA", "", "SBIN0001234", "", "", "", "", "", ""],
+    ["46860001", "SAMPLE NAME", "STP", "1", "OPERATOR", "SEMI SKILLED", "01-10-2026", "Sun", 17186, 0, 0, 0, 0, "Y", "Y", "Y", "", "", "", "STATE BANK OF INDIA", "", "SBIN0001234", "", "", "", "", "", "", "Active", "", ""],
   ]);
   ws["!cols"] = TEMPLATE_COLUMNS.map(([, l]) => ({ wch: Math.max(12, l.length + 2) }));
   const wb = XLSX.utils.book_new();
