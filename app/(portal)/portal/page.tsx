@@ -22,7 +22,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       </PageHead>
       {sp.denied ? <div style={{ marginBottom: 16 }}><Alert kind="warn">That page is for the owner account only.</Alert></div> : null}
       {user.role === "owner" && backup.state !== "ok" ? <div style={{ marginBottom: 16 }}><Alert kind={backup.state === "old" ? "warn" : "err"}>
-        {backup.state === "none" ? <><b>Database backup is not running.</b> Nothing has been backed up to the bucket yet — run the backup fix on the server (VEC-Server-Setupix-backup.sh).</>
+        {backup.state === "none" ? <><b>Database backup is not running.</b> Nothing has been backed up to the bucket yet — run on the server: <span className="mono">sudo bash /opt/vec/releases/current/tools/fix-backup.sh</span></>
           : backup.state === "failed" ? <><b>Last database backup failed</b> ({when(backup.at)}): {backup.error}. Fix it, then test with <span className="mono">sudo /opt/vec/bin/backup.sh --check</span>.</>
           : <><b>No database backup for {Math.floor(backup.hours / 24)} days</b> — the last one was {when(backup.at)}. Check /var/log/vec-backup.log on the server.</>}
       </Alert></div> : null}
