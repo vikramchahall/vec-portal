@@ -327,7 +327,7 @@ export const completedProjects: Project[] = [
     category: "pipeline",
     description:
       "Four pipeline runs totalling roughly 2,300 running metres — 600 mm dia from SPS-1 to the STP, and 350 mm dia from SPS-2 to the STP, SPS-3 to SPS-2 and the STP to the lake. 3,300 cum of excavation to 3 m, layer-wise compacted backfill, 10 valve chambers and 25 thrust blocks.",
-    image: "stp-plant",
+    image: "psc-pipe-laying",
   },
   {
     ref: "C1",

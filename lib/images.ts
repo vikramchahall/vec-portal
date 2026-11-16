@@ -51,6 +51,7 @@ export const images: StockImage[] = [
   { slug: "rodm-plant", id: "", alt: "Filter vessels and pipework at an RO-DM plant", isStock: false },
   { slug: "canal-channel", id: "", alt: "Lined raw-water canal with trees alongside", isStock: false },
   { slug: "stp-plant", id: "", alt: "Treatment plant with clarifiers, walkways and blue pipework", isStock: true },
+  { slug: "psc-pipe-laying", id: "", alt: "Large concrete pipes being lowered into a trench by crane, with workers in hard hats", isStock: true },
 ];
 
 const bySlug = new Map(images.map((i) => [i.slug, i]));
