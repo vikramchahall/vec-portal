@@ -32,3 +32,17 @@ export function sealed(value: string | null | undefined): { enc: string | null; 
   const v = (value ?? "").replace(/\s+/g, "");
   return v ? { enc: encrypt(v), last4: v.slice(-4) } : { enc: null, last4: null };
 }
+
+/** Files (employee documents): AES-256-GCM, stored as iv (12) + tag (16) + ciphertext. */
+export function encryptBytes(plain: Buffer): Buffer {
+  const iv = randomBytes(12);
+  const c = createCipheriv("aes-256-gcm", key(), iv);
+  const ct = Buffer.concat([c.update(plain), c.final()]);
+  return Buffer.concat([iv, c.getAuthTag(), ct]);
+}
+
+export function decryptBytes(stored: Buffer): Buffer {
+  const d = createDecipheriv("aes-256-gcm", key(), stored.subarray(0, 12));
+  d.setAuthTag(stored.subarray(12, 28));
+  return Buffer.concat([d.update(stored.subarray(28)), d.final()]);
+}

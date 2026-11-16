@@ -17,11 +17,11 @@ const NAV: Section[] = [
       { t: "Employee Directory", href: "/portal/employees" },
       { t: "Add Employee", href: "/portal/employees/new" },
       { t: "Import from Excel", href: "/portal/employees/import" },
-      { t: "Employee Documents", soon: "S1b" },
+      { t: "Employee Documents", href: "/portal/employees/documents" },
     ] },
     { t: "Attendance", icon: "calendar", items: [
       { t: "Punch Data Upload", href: "/portal/attendance/upload" }, { t: "Time Compliance", href: "/portal/attendance/time-compliance" }, { t: "Attendance Review", href: "/portal/attendance/review" },
-      { t: "Leave Management", soon: "S3" }, { t: "C-Off Management", soon: "S3" },
+      { t: "Leave Management", href: "/portal/attendance/leave" }, { t: "C-Off Management", href: "/portal/attendance/coff" },
     ] },
   ] },
   { label: "Payroll & Compliance", groups: [
@@ -29,13 +29,13 @@ const NAV: Section[] = [
       { t: "Working Salary", href: "/portal/payroll/working-salary" }, { t: "Site salary file", href: "/portal/payroll/site-file" }, { t: "Approval & Lock", href: "/portal/payroll/approval" },
     ] },
     { t: "Statutory & Compliance", icon: "shield", items: [
-      { t: "PF / ESIC", href: "/portal/statutory" }, { t: "Compliance Calendar", soon: "S7" },
+      { t: "PF / ESIC", href: "/portal/statutory" }, { t: "Compliance Calendar", href: "/portal/statutory/calendar" },
     ] },
   ] },
   { label: "Business", groups: [
     { t: "Operations", icon: "factory", items: [{ t: "Sites & Units", href: "/portal/sites" }, { t: "Website enquiries", href: "/portal/enquiries" }] },
-    { t: "Finance", icon: "rupee", items: [{ t: "Billing & Profitability", soon: "P2" }] },
-    { t: "Reports & Analytics", icon: "chart", items: [{ t: "Reports", soon: "S9" }] },
+    { t: "Finance", icon: "rupee", items: [{ t: "Billing & Profitability", href: "/portal/finance" }] },
+    { t: "Reports & Analytics", icon: "chart", items: [{ t: "Reports", href: "/portal/reports" }] },
   ] },
 ];
 

@@ -30,6 +30,9 @@ export const units = pgTable("units", {
   workOrders: text("work_orders").array().notNull().default([]),
   mode: text("mode").notNull(), // punch | file
   sortOrder: integer("sort_order").notNull().default(0),
+  // what VEC earns on the unit: per_employee = ₹ rate per person paid per month; percent = rate % on the salary cost (CTC for billing)
+  billingModel: text("billing_model").notNull().default("per_employee"),
+  billingRate: numeric("billing_rate", { precision: 12, scale: 2 }).notNull().default("0"),
 });
 
 export const employees = pgTable("employees", {
@@ -256,3 +259,56 @@ export const jobApplications = pgTable("job_applications", {
   ipHash: text("ip_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [index("job_applications_created").on(t.createdAt)]);
+
+// Compliance calendar: recurring obligations (owner-editable) and what was filed for each period.
+export const complianceItems = pgTable("compliance_items", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  authority: text("authority"), // EPFO, ESIC, Punjab Labour Dept …
+  frequency: text("frequency").notNull(), // monthly | half_yearly | yearly
+  dueDay: integer("due_day").notNull(), // day of the month it is due
+  dueMonths: integer("due_months").array().notNull().default([]), // half-yearly / yearly: the months it falls in (1-12)
+  period: text("period").notNull().default("previous month"), // what the filing covers, shown as text
+  appliesTo: text("applies_to"), // e.g. "HMEL units (Punjab)"
+  notes: text("notes"),
+  active: boolean("active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  trackFrom: date("track_from").notNull().defaultNow(), // dues before this day are not shown (filed before the portal kept them)
+});
+
+export const complianceDone = pgTable("compliance_done", {
+  itemId: integer("item_id").notNull().references(() => complianceItems.id, { onDelete: "cascade" }),
+  dueDate: date("due_date").notNull(),
+  doneAt: timestamp("done_at", { withTimezone: true }).defaultNow().notNull(),
+  doneBy: text("done_by").notNull(),
+  reference: text("reference"), // challan / TRRN / acknowledgement no.
+  note: text("note"),
+}, (t) => [primaryKey({ columns: [t.itemId, t.dueDate] })]);
+
+// Scanned papers per person (Aadhaar, PAN, passbook, photo, letters). The file is encrypted (lib/crypto encryptBytes).
+export const employeeDocuments = pgTable("employee_documents", {
+  id: serial("id").primaryKey(),
+  employeeId: integer("employee_id").notNull().references(() => employees.id),
+  kind: text("kind").notNull(), // aadhaar | pan | bank | photo | appointment | other
+  fileName: text("file_name").notNull(),
+  mime: text("mime").notNull(),
+  bytes: integer("bytes").notNull(),
+  data: bytea("data").notNull(),
+  note: text("note"),
+  uploadedBy: text("uploaded_by").notNull(),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index("employee_documents_emp").on(t.employeeId)]);
+
+// Bill the client passed for a unit and month (entered by the office) — compared with the expected bill.
+export const clientBills = pgTable("client_bills", {
+  unitId: integer("unit_id").notNull().references(() => units.id),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  billNo: text("bill_no"),
+  billDate: date("bill_date"),
+  amount: numeric("amount", { precision: 14, scale: 2 }).notNull(), // amount passed by the client (before GST)
+  passedOn: date("passed_on"),
+  note: text("note"),
+  updatedBy: text("updated_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [primaryKey({ columns: [t.unitId, t.year, t.month] })]);

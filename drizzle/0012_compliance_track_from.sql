@@ -1,0 +1,1 @@
+ALTER TABLE "compliance_items" ADD COLUMN "track_from" date DEFAULT now() NOT NULL;

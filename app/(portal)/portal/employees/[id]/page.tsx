@@ -5,8 +5,10 @@ import { getEmployee } from "@/lib/employees";
 import { Icon } from "@/components/vec/Icon";
 import { Alert, Crumbs, StatusBadge, fmtDate, initials, inr } from "@/components/vec/ui";
 import RevealButton from "../RevealButton";
+import { DOC_KINDS, docLabel, documentsOf } from "@/lib/documents";
+import { DeleteDocument, UploadDocument } from "./documents/DocumentsClient";
 
-const TABS = [["personal", "Personal"], ["employment", "Employment"], ["statutory", "Statutory"], ["bank", "Bank"], ["history", "History & transfers"]] as const;
+const TABS = [["personal", "Personal"], ["employment", "Employment"], ["statutory", "Statutory"], ["bank", "Bank"], ["documents", "Documents"], ["history", "History & transfers"]] as const;
 
 type Row = [string, React.ReactNode, React.ReactNode?];
 function KV({ rows }: { rows: Row[] }) {
@@ -76,6 +78,24 @@ export default async function Profile({ params, searchParams }: { params: Promis
       ["IFSC", e.ifsc], ["Account holder", e.name],
     ]} />
   );
+  else if (tab === "documents") {
+    const docs = await documentsOf(e.id);
+    body = (
+      <div className="card">
+        <div className="card-h"><Icon name="file" size="sm" /><h3>Documents</h3><span className="right dim" style={{ fontSize: 12 }}>{docs.length} on file</span></div>
+        <div className="card-b" style={{ borderBottom: "1px solid var(--line)" }}><UploadDocument employeeId={e.id} kinds={DOC_KINDS} /></div>
+        {docs.length ? <div className="tbl-wrap"><table className="tbl compact">
+          <thead><tr><th>Document</th><th>File</th><th className="num">Size</th><th>Uploaded</th><th></th></tr></thead>
+          <tbody>{docs.map((d) => (
+            <tr key={d.id}><td><b>{docLabel(d.kind)}</b>{d.note ? <div className="dim" style={{ fontSize: 12 }}>{d.note}</div> : null}</td>
+              <td><a href={`/portal/employees/${e.id}/documents/${d.id}`} target="_blank" rel="noopener">{d.fileName}</a></td>
+              <td className="num">{(d.bytes / 1024).toFixed(0)} KB</td>
+              <td>{d.uploadedAt.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })} · {d.uploadedBy}</td>
+              <td>{owner ? <DeleteDocument employeeId={e.id} id={d.id} name={d.fileName} /> : null}</td></tr>))}</tbody>
+        </table></div> : <div className="empty">No documents yet — upload the Aadhaar card, PAN, bank passbook and photo.</div>}
+      </div>
+    );
+  }
   else body = (<>
     <div className="grid g2">
       <div className="card"><div className="card-h"><h3>Gate cards</h3></div><div className="tbl-wrap"><table className="tbl compact">
