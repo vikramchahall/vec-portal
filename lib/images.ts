@@ -46,6 +46,11 @@ export const images: StockImage[] = [
   { slug: "smelter-molten", id: "6804260", alt: "Molten metal in a foundry ladle", isStock: true },
   { slug: "transport-buses", id: "18029643", alt: "Buses parked in a lot", isStock: true },
   { slug: "water-channel", id: "14108476", alt: "Concrete structure beside flowing water", isStock: true },
+  // photographs supplied by VEC (already in /public/images; no Pexels id)
+  { slug: "guest-house-room", id: "", alt: "Guest-house room with two beds, a table and a chair", isStock: false },
+  { slug: "rodm-plant", id: "", alt: "Filter vessels and pipework at an RO-DM plant", isStock: false },
+  { slug: "canal-channel", id: "", alt: "Lined raw-water canal with trees alongside", isStock: false },
+  { slug: "stp-plant", id: "", alt: "Treatment plant with clarifiers, walkways and blue pipework", isStock: true },
 ];
 
 const bySlug = new Map(images.map((i) => [i.slug, i]));

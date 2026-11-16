@@ -199,7 +199,7 @@ export const liveSites: Project[] = [
     category: "om-plants",
     description:
       "O&M manpower for the RO-DM plant at the zinc smelter — plant operation, mechanical and electrical maintenance, junior engineering supervision, lab chemistry and helper support.",
-    image: "smelter-molten",
+    image: "rodm-plant",
   },
   {
     ref: "OTHER-HMEL",
@@ -228,7 +228,7 @@ export const completedProjects: Project[] = [
     category: "site-services",
     description:
       "Second renewal of the raw water channel contract, awarded as an annual rate contract for the Guru Gobind Singh Refinery.",
-    image: "water-channel",
+    image: "canal-channel",
   },
   {
     ref: "C9",
@@ -240,7 +240,7 @@ export const completedProjects: Project[] = [
     category: "site-services",
     description:
       "First renewal of the channel cleaning and patrolling contract, re-awarded on satisfactory performance.",
-    image: "water-channel",
+    image: "canal-channel",
   },
   {
     ref: "C8",
@@ -277,7 +277,7 @@ export const completedProjects: Project[] = [
     category: "site-services",
     description:
       "36 fully furnished rooms with rent and accommodation management, round-the-clock housekeeping, cook management and common mess operation, and twice-daily refreshments for all staff on duty.",
-    image: "refinery-day",
+    image: "guest-house-room",
   },
   {
     ref: "C5",
@@ -289,7 +289,7 @@ export const completedProjects: Project[] = [
     category: "manpower",
     description:
       "Greasing, lubricating, finishing and cleaning of units and equipment; chemical preparation and dosing; assisting equipment rectification and repair; periodical cleaning of all civil process units; equipment history cards and daily logbooks.",
-    image: "operator-panel",
+    image: "rodm-plant",
   },
   {
     ref: "C4",
@@ -301,7 +301,7 @@ export const completedProjects: Project[] = [
     category: "site-services",
     description:
       "Monitoring and cleaning the canal from the Bangi head channel to the Kotla Canal plant intake — one man per shift round the clock, inlet gate monitoring, removal and disposal of debris, solids, grasses and bushes.",
-    image: "water-channel",
+    image: "canal-channel",
   },
   {
     ref: "C3",
@@ -327,7 +327,7 @@ export const completedProjects: Project[] = [
     category: "pipeline",
     description:
       "Four pipeline runs totalling roughly 2,300 running metres — 600 mm dia from SPS-1 to the STP, and 350 mm dia from SPS-2 to the STP, SPS-3 to SPS-2 and the STP to the lake. 3,300 cum of excavation to 3 m, layer-wise compacted backfill, 10 valve chambers and 25 thrust blocks.",
-    image: "stp-aerial-2",
+    image: "stp-plant",
   },
   {
     ref: "C1",
@@ -339,7 +339,7 @@ export const completedProjects: Project[] = [
     category: "erection",
     description:
       "Full mechanical scope for a 10 MLD sewage treatment plant executed to GA drawings, with our own hydra, cranes, welding sets and consumables, through trial run, commissioning and a one-year defect liability period.",
-    image: "stp-aerial-1",
+    image: "stp-plant",
   },
 ];
 

@@ -29,13 +29,13 @@ export default function HomePage() {
           fill
           priority
           sizes="100vw"
-          className="drift object-cover opacity-55"
+          className="drift object-cover opacity-80"
         />
         <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[160vmax] w-[160vmax] -translate-x-1/2 -translate-y-1/2">
           <div className="beam h-full w-full" />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-r from-void via-void/90 to-void/40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-void via-transparent to-void/60" />
+        <div className="absolute inset-0 bg-gradient-to-r from-void/90 via-void/60 to-void/10" />
+        <div className="absolute inset-0 bg-gradient-to-t from-void/90 via-transparent to-void/30" />
         <div className="grid-field absolute inset-0 opacity-60" />
 
         <Container className="relative z-10 pt-24">
